@@ -7,6 +7,9 @@
 <meta name="description" content="12/3~6 삿포로·노보리베츠·오타루 JR패스 이용법과 일정">
 <meta property="og:title" content="❄️ 삿포로 여행 가이드 12/3~6">
 <meta property="og:description" content="JR패스 이용법 · 노보리베츠 · 오타루 · 삿포로 놀거리">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/leaflet-polylinedecorator@1.6.0/dist/leaflet.polylineDecorator.min.js"></script>
 <style>
   :root {
     --bg: #f6f8fb; --card: #ffffff; --text: #1d2330; --muted: #5d6676;
@@ -73,6 +76,19 @@
   .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
   .pill { display: inline-block; background: var(--chip); border-radius: 6px; padding: 1px 8px; font-size: .85rem; margin: 2px 4px 2px 0; }
   footer { margin-top: 36px; color: var(--muted); font-size: .85rem; }
+  #map { height: 440px; border-radius: 14px; border: 1px solid var(--line); z-index: 0; }
+  .day-btns { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+  .day-btns button {
+    border: 1px solid var(--line); background: var(--card); color: var(--text);
+    border-radius: 999px; padding: 6px 12px; font-size: .9rem; cursor: pointer;
+  }
+  .day-btns button.on { color: #fff; border-color: transparent; }
+  .legend { display: flex; gap: 12px; flex-wrap: wrap; font-size: .85rem; color: var(--muted); margin-top: 8px; }
+  .legend i { display: inline-block; width: 18px; height: 4px; border-radius: 2px; vertical-align: middle; margin-right: 4px; }
+  .num-pin {
+    width: 26px; height: 26px; border-radius: 50%; color: #fff; font-weight: 700; font-size: 13px;
+    display: grid; place-items: center; border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.4);
+  }
   a { color: var(--accent); }
 </style>
 </head>
@@ -82,12 +98,21 @@
     <h1>❄️ 삿포로 여행 가이드</h1>
     <p class="sub">2026년 12월 3일(목) ~ 6일(일) · 삿포로 · 노보리베츠 · 오타루</p>
     <nav>
+      <a href="#route">🗺 지도·동선</a>
       <a href="#pass">🎫 JR패스</a>
       <a href="#plan">🗓 일정</a>
       <a href="#fun">🎡 놀거리</a>
       <a href="#weather">🌨 날씨·준비물</a>
     </nav>
   </header>
+
+  <section id="route">
+    <h2>🗺 지도 · 날짜별 동선</h2>
+    <div class="day-btns" id="dayBtns"></div>
+    <div id="map" role="img" aria-label="삿포로·노보리베츠·오타루 날짜별 이동 경로 지도"></div>
+    <div class="legend" id="legend"></div>
+    <p class="where">번호 순서대로 이동해요. 화살표는 이동 방향이고, 기차 구간은 직선으로 표시했어요(실제 선로와 다름). 핀을 누르면 설명이 나와요.</p>
+  </section>
 
   <section id="pass">
     <h2>🎫 어떤 JR패스가 좋을까?</h2>
@@ -235,5 +260,97 @@
     참고: <a href="https://www.jrhokkaido.co.jp/global/english/ticket/railpass/" target="_blank" rel="noopener">JR Hokkaido Rail Passes</a>
   </footer>
 </div>
+<script>
+(function () {
+  if (typeof L === "undefined") {
+    document.getElementById("map").innerHTML = "<p style='padding:16px'>지도를 불러오지 못했어요. 인터넷 연결을 확인해 주세요.</p>";
+    return;
+  }
+  const P = {
+    cts:   [42.7752, 141.6923, "신치토세공항", "JR패스 교환 · 지정석 받기"],
+    spk:   [43.0687, 141.3508, "삿포로역", "JR타워 T38 전망대 · 쇼핑"],
+    odori: [43.0611, 141.3564, "오도리공원", "화이트 일루미네이션 · 크리스마스 마켓 · TV타워"],
+    susu:  [43.0556, 141.3533, "스스키노", "미소라멘 · 징기스칸"],
+    nbst:  [42.4521, 141.1807, "노보리베츠역", "온천행 버스 약 15~20분 (패스 불포함)"],
+    jigo:  [42.4969, 141.1478, "지옥계곡", "지고쿠다니 산책"],
+    oyu:   [42.5040, 141.1545, "오유누마 · 족욕", "천연 족욕"],
+    onsen: [42.4955, 141.1440, "노보리베츠 온천가", "온천 호텔 당일 입욕"],
+    otst:  [43.1977, 140.9937, "오타루역", "쾌속 에어포트 u시트 약 32분"],
+    sakai: [43.1912, 141.0040, "사카이마치 거리", "오르골당 · 기타이치 유리 · 르타오"],
+    sushi: [43.1950, 140.9995, "스시 거리", "점심 초밥"],
+    canal: [43.1990, 140.9985, "오타루 운하", "16시 이후 가스등 야경"],
+    nijo:  [43.0589, 141.3585, "니조시장", "해산물 덮밥 아침"],
+    clock: [43.0625, 141.3536, "삿포로 시계탑", ""]
+  };
+  const DAYS = [
+    { id: "d1", name: "DAY1 12/3", color: "#2b6cb0", stops: ["cts", "spk", "odori", "susu"] },
+    { id: "d2", name: "DAY2 12/4", color: "#c05621", stops: ["spk", "nbst", "jigo", "oyu", "onsen", "nbst", "spk"] },
+    { id: "d3", name: "DAY3 12/5", color: "#2f855a", stops: ["spk", "otst", "sakai", "sushi", "canal", "otst", "spk"] },
+    { id: "d4", name: "DAY4 12/6", color: "#805ad5", stops: ["nijo", "clock", "spk", "cts"] }
+  ];
+
+  const map = L.map("map", { scrollWheelZoom: false });
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 18, attribution: "&copy; OpenStreetMap"
+  }).addTo(map);
+
+  const groups = {};
+  DAYS.forEach(d => {
+    const g = L.layerGroup();
+    const pts = d.stops.map(k => [P[k][0], P[k][1]]);
+    const line = L.polyline(pts, { color: d.color, weight: 4, opacity: .85 }).addTo(g);
+    L.polylineDecorator(line, {
+      patterns: [{
+        offset: "8%", repeat: "18%",
+        symbol: L.Symbol.arrowHead({ pixelSize: 13, polygon: true, pathOptions: { color: d.color, fillOpacity: 1, weight: 0 } })
+      }]
+    }).addTo(g);
+    const seen = {};
+    d.stops.forEach((k, i) => {
+      if (seen[k]) { seen[k].push(i + 1); return; }
+      seen[k] = [i + 1];
+    });
+    Object.keys(seen).forEach(k => {
+      const p = P[k];
+      const icon = L.divIcon({
+        className: "", iconSize: [26, 26], iconAnchor: [13, 13],
+        html: "<div class='num-pin' style='background:" + d.color + "'>" + seen[k][0] + "</div>"
+      });
+      L.marker([p[0], p[1]], { icon })
+        .bindPopup("<b>" + d.name + " · " + seen[k].join("/") + ". " + p[2] + "</b>" + (p[3] ? "<br>" + p[3] : ""))
+        .addTo(g);
+    });
+    g._bounds = L.latLngBounds(pts);
+    groups[d.id] = g;
+  });
+
+  const btnBox = document.getElementById("dayBtns");
+  const legend = document.getElementById("legend");
+  function show(id) {
+    Object.values(groups).forEach(g => map.removeLayer(g));
+    let bounds = null;
+    DAYS.forEach(d => {
+      if (id === "all" || id === d.id) {
+        groups[d.id].addTo(map);
+        bounds = bounds ? bounds.extend(groups[d.id]._bounds) : L.latLngBounds(groups[d.id]._bounds.getSouthWest(), groups[d.id]._bounds.getNorthEast());
+      }
+    });
+    map.fitBounds(bounds, { padding: [30, 30] });
+    btnBox.querySelectorAll("button").forEach(b => {
+      const on = b.dataset.id === id;
+      b.classList.toggle("on", on);
+      b.style.background = on ? (b.dataset.color || "#4a5568") : "";
+    });
+  }
+  [{ id: "all", name: "전체", color: "#4a5568" }].concat(DAYS).forEach(d => {
+    const b = document.createElement("button");
+    b.textContent = d.name; b.dataset.id = d.id; b.dataset.color = d.color;
+    b.onclick = () => show(d.id);
+    btnBox.appendChild(b);
+    if (d.id !== "all") legend.insertAdjacentHTML("beforeend", "<span><i style='background:" + d.color + "'></i>" + d.name + "</span>");
+  });
+  show("all");
+})();
+</script>
 </body>
 </html>
