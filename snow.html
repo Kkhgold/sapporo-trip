@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>폭설 대체 플랜</title>
+<meta name="description" content="12/4 노보리베츠를 못 갈 때 대신 갈 곳 3가지와 이동 동선">
+<meta property="og:title" content="🌨 폭설 대체 플랜 · 노보리베츠 못 가면?">
+<meta property="og:description" content="조잔케이 온천 · 신치토세공항 · 삿포로 실내 코스 + 동선 애니메이션">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+  :root {
+    --bg: #f4f7fb; --card: #ffffff; --text: #1b2230; --muted: #5d6676; --line: #e1e6ee; --chip: #edf1f7;
+    --accent: #2b6cb0; --warn: #b7791f; --warn-soft: #fdf4e3;
+    --a: #d1495b; --b: #2b7a78; --c: #6b4fc8;
+    --hero1: #0f2a4a; --hero2: #3b6ea8;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #10141b; --card: #19202a; --text: #e8ecf3; --muted: #9aa4b5; --line: #2a3240; --chip: #232b37;
+      --accent: #7fb3ec; --warn: #f0c36b; --warn-soft: #2e2716;
+      --a: #ef6f80; --b: #4fb3ae; --c: #9a83ea; --hero1: #0a1726; --hero2: #23466f;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #10141b; --card: #19202a; --text: #e8ecf3; --muted: #9aa4b5; --line: #2a3240; --chip: #232b37;
+    --accent: #7fb3ec; --warn: #f0c36b; --warn-soft: #2e2716;
+    --a: #ef6f80; --b: #4fb3ae; --c: #9a83ea; --hero1: #0a1726; --hero2: #23466f;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); line-height: 1.6;
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif; }
+  .hero { position: relative; overflow: hidden; color: #fff; padding: 28px 16px 26px;
+    background: linear-gradient(160deg, var(--hero1), var(--hero2)); }
+  .hero .in { position: relative; max-width: 760px; margin: 0 auto; z-index: 1; }
+  .hero h1 { margin: 4px 0 6px; font-size: 1.6rem; }
+  .hero p { margin: 0; opacity: .88; }
+  .kicker { font-size: .82rem; opacity: .75; letter-spacing: .04em; }
+  .snow { position: absolute; inset: 0; pointer-events: none; }
+  .snow i { position: absolute; top: -10px; width: 6px; height: 6px; border-radius: 50%; background: #fff; opacity: .7;
+    animation: fall linear infinite; }
+  @keyframes fall { to { transform: translate3d(20px, 260px, 0); opacity: 0; } }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 18px 16px 56px; }
+  a { color: var(--accent); }
+  h2 { font-size: 1.2rem; margin: 30px 0 12px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 16px; margin-bottom: 12px; }
+  .note { background: var(--warn-soft); border-left: 4px solid var(--warn); border-radius: 10px; padding: 10px 12px; font-size: .95rem; margin-top: 10px; }
+  .check { list-style: none; padding: 0; margin: 0; }
+  .check li { display: flex; gap: 10px; padding: 8px 0; border-top: 1px dashed var(--line); }
+  .check li:first-child { border-top: 0; }
+  .check b.t { flex: 0 0 52px; color: var(--accent); }
+  .tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+  .tabs button { flex: 1 1 140px; border: 2px solid var(--line); background: var(--card); color: var(--text); font: inherit;
+    border-radius: 14px; padding: 10px 12px; text-align: left; cursor: pointer; transition: transform .15s, border-color .15s; }
+  .tabs button:hover { transform: translateY(-2px); }
+  .tabs button b { display: block; font-size: 1rem; }
+  .tabs button span { font-size: .8rem; color: var(--muted); }
+  .tabs button[aria-pressed="true"] { border-color: var(--pc); box-shadow: 0 0 0 3px color-mix(in srgb, var(--pc) 18%, transparent); }
+  .mapbox { position: relative; }
+  #map { height: 420px; border-radius: 16px; border: 1px solid var(--line); z-index: 0; }
+  .ctrl { display: flex; gap: 8px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
+  .ctrl button { border: 1px solid var(--line); background: var(--card); color: var(--text); font: inherit; font-size: .9rem;
+    border-radius: 999px; padding: 6px 14px; cursor: pointer; }
+  .ctrl .now { color: var(--muted); font-size: .9rem; }
+  .bar { flex: 1 1 160px; height: 6px; background: var(--chip); border-radius: 3px; overflow: hidden; }
+  .bar i { display: block; height: 100%; width: 0; background: var(--pc); }
+  .steps { list-style: none; padding: 0; margin: 12px 0 0; }
+  .steps li { position: relative; padding: 10px 12px 10px 48px; border-radius: 12px; transition: background .3s, opacity .3s; opacity: .55; cursor: pointer; }
+  .steps li .n { position: absolute; left: 10px; top: 10px; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center;
+    background: var(--chip); color: var(--muted); font-weight: 800; font-size: .85rem; transition: background .3s, color .3s, transform .3s; }
+  .steps li.done { opacity: 1; }
+  .steps li.done .n { background: var(--pc); color: #fff; }
+  .steps li.cur { background: color-mix(in srgb, var(--pc) 10%, transparent); opacity: 1; }
+  .steps li.cur .n { transform: scale(1.15); }
+  .steps .m { color: var(--muted); font-size: .85rem; }
+  .steps .ttl { font-weight: 700; }
+  .meta { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+  .pill { background: var(--chip); border-radius: 999px; padding: 1px 10px; font-size: .8rem; font-weight: 600; color: var(--muted); }
+  .pill.ok { color: #fff; background: var(--b); }
+  .pill.no { color: #fff; background: var(--warn); }
+  table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+  th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; white-space: nowrap; }
+  .pin { width: 28px; height: 28px; border-radius: 50%; color: #fff; font-weight: 800; font-size: 13px; display: grid; place-items: center;
+    border: 2px solid #fff; box-shadow: 0 1px 5px rgba(0,0,0,.4); transform: scale(0); transition: transform .35s cubic-bezier(.2,1.6,.4,1); }
+  .pin.show { transform: scale(1); }
+  .mover { font-size: 26px; line-height: 1; filter: drop-shadow(0 2px 3px rgba(0,0,0,.45)); }
+  footer { margin-top: 36px; color: var(--muted); font-size: .85rem; }
+  @media (prefers-reduced-motion: reduce) { .snow { display: none; } .pin { transition: none; } }
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="snow" id="snow" aria-hidden="true"></div>
+  <div class="in">
+    <div class="kicker">SAPPORO · PLAN B</div>
+    <h1>🌨 노보리베츠를 못 가게 되면?</h1>
+    <p>12/4(금) 폭설로 노보리베츠행 특급이 멈출 때 대신 갈 곳 3가지</p>
+  </div>
+</header>
+
+<div class="wrap">
+  <p><a href="./">← 원래 여행 가이드로</a></p>
+
+  <h2>⏰ 당일 아침 판단법</h2>
+  <div class="card">
+    <ul class="check">
+      <li><b class="t">전날 밤</b><span>일기예보에 <b>폭설·폭풍설 경보</b>가 있으면 대체 플랜을 미리 정해 두기</span></li>
+      <li><b class="t">7시</b><span><a href="https://www3.jrhokkaido.co.jp/webunkou/" target="_blank" rel="noopener">JR 홋카이도 운행정보</a>에서 <b>특급 스즈란·호쿠토</b>(삿포로↔노보리베츠) 운휴 여부 확인</span></li>
+      <li><b class="t">운휴</b><span>아래 <b>A·B·C 중 하나</b>로 바로 변경. 지정석은 역 창구에서 <b>취소·변경</b> (패스면 추가요금 없음)</span></li>
+      <li><b class="t">애매</b><span>"지연"만 있으면 출발은 해도 <b>돌아오는 열차가 끊길 수 있어요</b>. 해 지는 16시 전 복귀 열차 확인</span></li>
+    </ul>
+    <div class="note">💡 12/5(토) 날씨가 더 좋다면 <b>노보리베츠와 오타루 날짜를 바꾸는 것</b>도 방법이에요. 다만 오타루 가는 선로도 눈·파도로 멈출 때가 있어요.</div>
+  </div>
+
+  <h2>🗺 대체 플랜 · 동선 애니메이션</h2>
+  <div class="tabs" id="tabs"></div>
+  <div class="mapbox">
+    <div id="map" role="img" aria-label="대체 플랜 이동 경로 지도"></div>
+  </div>
+  <div class="ctrl">
+    <button id="play">▶ 다시 보기</button>
+    <div class="bar"><i id="bar"></i></div>
+    <span class="now" id="now"></span>
+  </div>
+  <ol class="steps" id="steps"></ol>
+
+  <h2>📊 한눈에 비교</h2>
+  <div class="card">
+    <table>
+      <tr><th></th><th>A 조잔케이</th><th>B 신치토세공항</th><th>C 시내 실내</th></tr>
+      <tr><th>온천</th><td>♨️ 제대로</td><td>♨️ 공항 온천</td><td>–</td></tr>
+      <tr><th>JR패스</th><td>불포함 (버스)</td><td><b>포함</b></td><td>불포함 (지하철)</td></tr>
+      <tr><th>편도 이동</th><td>버스 약 60~80분</td><td>쾌속 약 37분</td><td>지하철 15~20분</td></tr>
+      <tr><th>눈에 강함</th><td>보통 (산길 버스)</td><td>보통 (JR)</td><td><b>가장 강함</b> (지하·실내)</td></tr>
+      <tr><th>추천</th><td>온천이 꼭 하고 싶을 때</td><td>패스 본전 + 쇼핑</td><td>폭설이 아주 심할 때</td></tr>
+    </table>
+  </div>
+
+  <footer>
+    요금·운영시간은 2026년 11월 검색 기준이며 바뀔 수 있어요. 특히 갓파라이너 요금·승차장은 안내마다 달라서
+    <a href="https://jozankei.jp/en/" target="_blank" rel="noopener">조잔케이 관광협회</a>에서 꼭 확인하세요.
+    · 지도 경로는 대략적인 표시예요(실제 도로·선로와 다름).<br>
+    참고: <a href="https://www.new-chitose-airport-onsen.com/en/" target="_blank" rel="noopener">신치토세공항 온천</a> ·
+    <a href="https://www.japan-guide.com/e/e5307.html" target="_blank" rel="noopener">시로이 코이비토 파크</a>
+  </footer>
+</div>
+
+<script>
+(function () {
+  // 눈 내리는 헤더
+  const sn = document.getElementById("snow");
+  if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    for (let i = 0; i < 40; i++) {
+      const e = document.createElement("i");
+      const s = 3 + Math.random() * 5;
+      e.style.cssText = `left:${Math.random() * 100}%;width:${s}px;height:${s}px;animation-duration:${4 + Math.random() * 6}s;animation-delay:${-Math.random() * 8}s`;
+      sn.appendChild(e);
+    }
+  }
+  if (typeof L === "undefined") {
+    document.getElementById("map").innerHTML = "<p style='padding:16px'>지도를 불러오지 못했어요.</p>";
+    return;
+  }
+  const css = getComputedStyle(document.documentElement);
+  const SPK = [43.0687, 141.3508];
+  // 각 구간: to(정류장 좌표), via(경유 좌표), mode(이동 아이콘)
+  const PLANS = [
+    { id: "a", color: "--a", name: "A ♨️ 조잔케이 온천", tag: "온천을 포기 못 할 때 · 버스 1시간",
+      stops: [
+        { at: SPK, t: "09:30 삿포로역 출발", d: "갓파라이너(예약제, 약 60분, 하루 8왕복) 또는 조테츠 버스 7·8번(약 75~80분, 약 790엔)", pills: ["패스 불포함:no", "갓파라이너 사전 예약"] },
+        { at: [42.9668, 141.1675], mode: "🚌", via: [[43.03, 141.342], [42.993, 141.344], [42.984, 141.308], [42.98, 141.26], [42.979, 141.22], [42.97, 141.185]],
+          t: "10:40 조잔케이 온천 도착", d: "계곡을 따라 온천 호텔이 늘어선 삿포로의 온천 마을", pills: ["버스 약 60~80분"] },
+        { at: [42.9705, 141.1612], mode: "🚶", t: "후타미 흔들다리", d: "눈 덮인 계곡 위 빨간 흔들다리. 산책로가 미끄러우니 아이젠 필수", pills: ["도보 약 10분"] },
+        { at: [42.9684, 141.1656], mode: "🚶", t: "족욕 · 점심", d: "마을 곳곳의 무료 족욕(아시유)에서 몸 녹이고 소바·라멘 점심", pills: ["무료 족욕"] },
+        { at: [42.9675, 141.1645], mode: "🚶", t: "13:30 온천 호텔 당일 입욕", d: "노천탕에서 설경 보며 온천. 호텔마다 당일 입욕 시간이 달라요", pills: ["노천탕"] },
+        { at: SPK, mode: "🚌", via: [[42.97, 141.185], [42.979, 141.22], [42.98, 141.26], [42.984, 141.308], [42.993, 141.344], [43.03, 141.342]],
+          t: "16:00 버스로 삿포로 복귀", d: "해가 16시쯤 지고 산길이라, 너무 늦지 않게 출발", pills: ["돌아오는 버스도 예약"] }
+      ] },
+    { id: "b", color: "--b", name: "B 🚆 신치토세공항", tag: "JR패스 그대로 · 공항 온천 + 쇼핑",
+      stops: [
+        { at: SPK, t: "10:00 삿포로역 출발", d: "쾌속 에어포트 u시트 (지정석, 패스 포함)", pills: ["패스 포함:ok"] },
+        { at: [42.7752, 141.6923], mode: "🚆", via: [[43.039, 141.474], [42.985, 141.563], [42.893, 141.587], [42.828, 141.652]],
+          t: "10:40 신치토세공항", d: "쾌속 에어포트가 자주 다녀서 일부 운휴돼도 탈 기회가 많아요", pills: ["약 37분"] },
+        { at: [42.7762, 141.6908], mode: "🚶", t: "로이즈 초콜릿 월드", d: "초콜릿 공장 견학 창 + 공항 한정 과자 쇼핑", pills: ["국내선 터미널 연결동"] },
+        { at: [42.7745, 141.6935], mode: "🚶", t: "점심 · 라멘 도장", d: "홋카이도 유명 라멘집이 모인 푸드코트", pills: ["국내선 3층"] },
+        { at: [42.7758, 141.6945], mode: "🚶", t: "14:00 신치토세공항 온천", d: "10:00~다음날 9:00 영업, 성인 약 1,500엔. 문신 있으면 입장 불가", pills: ["노천탕 있음"] },
+        { at: SPK, mode: "🚆", via: [[42.828, 141.652], [42.893, 141.587], [42.985, 141.563], [43.039, 141.474]],
+          t: "17:00 삿포로 복귀", d: "저녁은 스스키노로", pills: ["패스 포함:ok"] }
+      ] },
+    { id: "c", color: "--c", name: "C 🏙 삿포로 실내 코스", tag: "폭설이 아주 심할 때 · 지하·실내 위주",
+      stops: [
+        { at: SPK, t: "10:00 삿포로역", d: "지하철 난보쿠선 → 오도리에서 도자이선 환승", pills: ["지하철"] },
+        { at: [43.0895, 141.2770], mode: "🚇", via: [[43.0606, 141.354], [43.056, 141.320], [43.0545, 141.315], [43.075, 141.300]],
+          t: "10:20 시로이 코이비토 파크", d: "미야노사와역 2번 출구 도보 7분. 성인 1,200엔, 12/1부터 일루미네이션(10:00~19:00, 입장 16:30까지)", pills: ["약 16분", "과자 만들기 체험"] },
+        { at: [43.0611, 141.3564], mode: "🚇", via: [[43.075, 141.300], [43.0545, 141.315], [43.056, 141.320]],
+          t: "13:00 오도리 · 지하보도 점심", d: "삿포로역~오도리 지하보도(치카호)로 눈 맞지 않고 이동", pills: ["지하 연결"] },
+        { at: [43.0717, 141.3685], mode: "🚕", t: "14:30 삿포로 맥주 박물관", d: "붉은 벽돌 건물에서 맥주 역사 구경 + 유료 시음. 눈이 많으면 택시 추천", pills: ["택시 약 10분"] },
+        { at: [43.0575, 141.3530], mode: "🚕", t: "17:00 다누키코지 상점가", d: "지붕 덮인 아케이드라 눈 와도 OK. 드럭스토어·기념품 쇼핑 후 스스키노 저녁", pills: ["지붕 있는 상점가"] }
+      ] }
+  ];
+
+  const map = L.map("map", { scrollWheelZoom: false, zoomControl: true });
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 18, attribution: "&copy; OpenStreetMap" }).addTo(map);
+
+  const tabs = document.getElementById("tabs"), stepsEl = document.getElementById("steps");
+  const bar = document.getElementById("bar"), nowEl = document.getElementById("now");
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let layer = null, raf = null, cur = null;
+
+  PLANS.forEach(p => {
+    const b = document.createElement("button");
+    b.style.setProperty("--pc", css.getPropertyValue(p.color));
+    b.innerHTML = `<b>${p.name}</b><span>${p.tag}</span>`;
+    b.dataset.id = p.id;
+    b.onclick = () => run(p);
+    tabs.appendChild(b);
+  });
+
+  function legs(p) {
+    // 구간별 좌표 목록과 길이
+    const out = [];
+    for (let i = 1; i < p.stops.length; i++) {
+      const s = p.stops[i];
+      const pts = [p.stops[i - 1].at].concat(s.via || [], [s.at]);
+      let len = 0;
+      for (let j = 1; j < pts.length; j++) len += map.distance(pts[j - 1], pts[j]);
+      out.push({ pts, len: Math.max(len, 1), mode: s.mode });
+    }
+    return out;
+  }
+  function along(pts, f) {
+    let total = 0; const seg = [];
+    for (let j = 1; j < pts.length; j++) { const d = map.distance(pts[j - 1], pts[j]); seg.push(d); total += d; }
+    let want = f * total; const path = [pts[0]];
+    for (let j = 1; j < pts.length; j++) {
+      if (want <= seg[j - 1]) {
+        const r = seg[j - 1] ? want / seg[j - 1] : 1;
+        const pt = [pts[j - 1][0] + (pts[j][0] - pts[j - 1][0]) * r, pts[j - 1][1] + (pts[j][1] - pts[j - 1][1]) * r];
+        path.push(pt); return { pt, path };
+      }
+      want -= seg[j - 1]; path.push(pts[j]);
+    }
+    return { pt: pts[pts.length - 1], path };
+  }
+
+  function run(p) {
+    cur = p;
+    const color = css.getPropertyValue(p.color).trim();
+    document.documentElement.style.setProperty("--pc", color);
+    tabs.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", b.dataset.id === p.id));
+    if (raf) cancelAnimationFrame(raf);
+    if (layer) map.removeLayer(layer);
+    layer = L.layerGroup().addTo(map);
+
+    // 단계 목록
+    stepsEl.innerHTML = p.stops.map((s, i) => `<li data-i="${i}"><span class="n">${i + 1}</span>
+      <div class="ttl">${s.mode ? s.mode + " " : ""}${s.t}</div><div class="m">${s.d}</div>
+      <div class="meta">${(s.pills || []).map(x => { const [t, k] = x.split(":"); return `<span class="pill ${k || ""}">${t}</span>`; }).join("")}</div></li>`).join("");
+    stepsEl.querySelectorAll("li").forEach(li => li.onclick = () => { const s = p.stops[+li.dataset.i]; map.flyTo(s.at, 15, { duration: .8 }); });
+
+    // 정류장 핀 (같은 좌표는 하나만)
+    const pins = [];
+    const seen = {};
+    p.stops.forEach((s, i) => {
+      const key = s.at.join(",");
+      if (seen[key] !== undefined) { pins.push(pins[seen[key]]); return; }
+      seen[key] = i;
+      const m = L.marker(s.at, { icon: L.divIcon({ className: "", iconSize: [28, 28], iconAnchor: [14, 14],
+        html: `<div class="pin" style="background:${color}">${i + 1}</div>` }) }).bindPopup(`<b>${i + 1}. ${s.t}</b><br>${s.d}`).addTo(layer);
+      pins.push(m);
+    });
+    const all = p.stops.flatMap(s => [s.at].concat(s.via || []));
+    map.fitBounds(L.latLngBounds(all), { padding: [36, 36] });
+
+    const L_ = legs(p);
+    L.polyline(L_.flatMap(l => l.pts), { color, weight: 3, opacity: .22, dashArray: "4 8" }).addTo(layer);
+    const drawn = L_.map(() => L.polyline([], { color, weight: 5, opacity: .9, lineCap: "round" }).addTo(layer));
+    const mover = L.marker(p.stops[0].at, { icon: L.divIcon({ className: "", iconSize: [30, 30], iconAnchor: [15, 15], html: "<div class='mover'>📍</div>" }), zIndexOffset: 1000 }).addTo(layer);
+
+    const items = stepsEl.querySelectorAll("li");
+    function mark(i) {
+      items.forEach((li, k) => { li.classList.toggle("done", k <= i); li.classList.toggle("cur", k === i); });
+      const el = pins[i] && pins[i].getElement && pins[i].getElement();
+      if (el) el.firstChild.classList.add("show");
+      nowEl.textContent = `${i + 1}/${p.stops.length} · ${p.stops[i].t}`;
+    }
+    function setMover(mode) { const el = mover.getElement(); if (el) el.firstChild.textContent = mode || "📍"; }
+
+    if (reduce) {
+      L_.forEach((l, k) => drawn[k].setLatLngs(l.pts));
+      p.stops.forEach((_, i) => mark(i)); bar.style.width = "100%"; mover.setLatLng(p.stops[p.stops.length - 1].at);
+      return;
+    }
+    mark(0); bar.style.width = "0";
+    // 구간마다 길이에 비례하되 최소 0.9초, 정류장에서 0.6초 쉬기
+    const dur = L_.map(l => Math.min(2600, 900 + l.len / 18));
+    const PAUSE = 600, total = dur.reduce((a, b) => a + b, 0) + PAUSE * L_.length;
+    let k = 0, t0 = null, marked = 0;
+    setTimeout(() => { raf = requestAnimationFrame(step); }, 500);
+    function step(ts) {
+      if (cur !== p) return;
+      if (t0 === null) t0 = ts;
+      const e = ts - t0, f = Math.min(1, e / dur[k]);
+      const ease = f < .5 ? 2 * f * f : 1 - Math.pow(-2 * f + 2, 2) / 2;
+      const r = along(L_[k].pts, ease);
+      drawn[k].setLatLngs(r.path); mover.setLatLng(r.pt); setMover(L_[k].mode);
+      const doneT = dur.slice(0, k).reduce((a, b) => a + b, 0) + PAUSE * k + Math.min(e, dur[k]);
+      bar.style.width = (doneT / total * 100) + "%";
+      if (f >= 1) {
+        if (marked < k + 1) { marked = k + 1; mark(k + 1); setMover("📍"); }
+        if (e < dur[k] + PAUSE) { raf = requestAnimationFrame(step); return; }
+        k++; t0 = null;
+        if (k >= L_.length) { bar.style.width = "100%"; return; }
+      }
+      raf = requestAnimationFrame(step);
+    }
+  }
+  document.getElementById("play").onclick = () => run(cur || PLANS[0]);
+  // 화면에 지도가 보일 때 처음 재생
+  const io = new IntersectionObserver(es => { if (es[0].isIntersecting) { io.disconnect(); run(PLANS[0]); } }, { threshold: .3 });
+  io.observe(document.getElementById("map"));
+})();
+</script>
+</body>
+</html>
