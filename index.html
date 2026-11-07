@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>삿포로 여행 가이드</title>
+<meta name="description" content="12/3~6 삿포로·노보리베츠·오타루 JR패스 이용법과 일정">
+<meta property="og:title" content="❄️ 삿포로 여행 가이드 12/3~6">
+<meta property="og:description" content="JR패스 이용법 · 노보리베츠 · 오타루 · 삿포로 놀거리">
+<style>
+  :root {
+    --bg: #f6f8fb; --card: #ffffff; --text: #1d2330; --muted: #5d6676;
+    --line: #e3e7ee; --accent: #2b6cb0; --accent-soft: #e8f1fb;
+    --warn: #b7791f; --warn-soft: #fdf4e3; --chip: #eef2f7;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #11151c; --card: #1a2029; --text: #e7ebf2; --muted: #9aa4b5;
+      --line: #2a3240; --accent: #7fb3ec; --accent-soft: #1d2a3b;
+      --warn: #f0c36b; --warn-soft: #2e2716; --chip: #232b37;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #11151c; --card: #1a2029; --text: #e7ebf2; --muted: #9aa4b5;
+    --line: #2a3240; --accent: #7fb3ec; --accent-soft: #1d2a3b;
+    --warn: #f0c36b; --warn-soft: #2e2716; --chip: #232b37;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif;
+    line-height: 1.6; font-size: 16px;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 20px 16px 48px; }
+  header { padding: 24px 0 8px; }
+  h1 { font-size: 1.6rem; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0; }
+  nav { display: flex; gap: 8px; flex-wrap: wrap; margin: 16px 0 8px; }
+  nav a {
+    background: var(--chip); color: var(--text); text-decoration: none;
+    padding: 6px 12px; border-radius: 999px; font-size: .9rem;
+  }
+  section { margin-top: 28px; }
+  h2 { font-size: 1.25rem; margin: 0 0 12px; }
+  h3 { font-size: 1.05rem; margin: 0 0 6px; }
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 16px; margin-bottom: 12px;
+  }
+  .day-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+  .badge {
+    background: var(--accent-soft); color: var(--accent); font-weight: 700;
+    border-radius: 8px; padding: 2px 10px; font-size: .9rem;
+  }
+  .where { color: var(--muted); font-size: .95rem; }
+  ul { margin: 6px 0 0; padding-left: 20px; }
+  li { margin: 4px 0; }
+  .time { display: inline-block; min-width: 3.4em; color: var(--accent); font-weight: 600; }
+  .note {
+    background: var(--warn-soft); border-left: 4px solid var(--warn);
+    border-radius: 8px; padding: 10px 12px; margin-top: 10px; font-size: .95rem;
+  }
+  .steps { counter-reset: s; list-style: none; padding: 0; }
+  .steps li { counter-increment: s; position: relative; padding-left: 36px; margin: 10px 0; }
+  .steps li::before {
+    content: counter(s); position: absolute; left: 0; top: 0;
+    width: 26px; height: 26px; border-radius: 50%; background: var(--accent); color: var(--bg);
+    display: grid; place-items: center; font-weight: 700; font-size: .85rem;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: .95rem; }
+  th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; white-space: nowrap; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+  .pill { display: inline-block; background: var(--chip); border-radius: 6px; padding: 1px 8px; font-size: .85rem; margin: 2px 4px 2px 0; }
+  footer { margin-top: 36px; color: var(--muted); font-size: .85rem; }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>❄️ 삿포로 여행 가이드</h1>
+    <p class="sub">2026년 12월 3일(목) ~ 6일(일) · 삿포로 · 노보리베츠 · 오타루</p>
+    <nav>
+      <a href="#pass">🎫 JR패스</a>
+      <a href="#plan">🗓 일정</a>
+      <a href="#fun">🎡 놀거리</a>
+      <a href="#weather">🌨 날씨·준비물</a>
+    </nav>
+  </header>
+
+  <section id="pass">
+    <h2>🎫 어떤 JR패스가 좋을까?</h2>
+    <div class="card">
+      <h3>추천: 삿포로-노보리베츠 에어리어 패스 (4일)</h3>
+      <p>12/3~6 딱 4일, 가려는 곳(신치토세공항 · 삿포로 · 오타루 · 노보리베츠)이 <b>모두 포함</b>돼요.</p>
+      <table>
+        <tr><th>가격</th><td>성인 약 <b>10,000엔</b> (사전 구매) · 현지 구매 시 약 1,000엔 더 비쌈</td></tr>
+        <tr><th>기간</th><td>연속 4일 → <b>12/3 ~ 12/6</b></td></tr>
+        <tr><th>지정석</th><td>구간 내 특급·쾌속 지정석(u시트 포함) <b>추가요금 없음</b></td></tr>
+        <tr><th>제외</th><td>버스(노보리베츠역→온천 버스 포함), 신칸센, 도야 방면</td></tr>
+      </table>
+      <div class="note">💡 패스 종류·가격은 바뀔 수 있어요. 구매 전에 <a href="https://www.jrhokkaido.co.jp/global/english/ticket/railpass/" target="_blank" rel="noopener">JR 홋카이도 공식 페이지</a>에서 꼭 확인하세요.</div>
+    </div>
+
+    <div class="card">
+      <h3>JR패스 이용 순서</h3>
+      <ol class="steps">
+        <li><b>패스 교환 (12/3 도착 직후)</b><br>신치토세공항 지하 JR 안내데스크에서 바우처·전자티켓을 실물 패스로 교환. <b>여권 필수</b> (두 명 모두).</li>
+        <li><b>지정석 미리 받기</b><br>교환할 때 <b>4일치 열차를 한 번에 지정</b>하면 편해요. 지정석 발매기에 패스를 넣어도 되고, 창구에서 패스+여권 보여줘도 OK.</li>
+        <li><b>탑승</b><br>개찰구는 <b>패스</b>를 통과시키고, 지정석권에 적힌 호차·좌석에 앉으면 끝.</li>
+      </ol>
+      <div class="note">⚠️ 2026년 3월 시간표 개정 이후 홋카이도 <b>특급은 전석 지정석</b>이라는 정보가 있어요. 노보리베츠 가는 특급은 <b>반드시 지정석권</b>을 받아두세요.</div>
+    </div>
+
+    <div class="card">
+      <h3>미리 지정해 두면 좋은 열차</h3>
+      <table>
+        <tr><th>날짜</th><th>구간</th><th>열차</th></tr>
+        <tr><td>12/3</td><td>신치토세공항 → 삿포로</td><td>쾌속 에어포트 u시트 (약 37분)</td></tr>
+        <tr><td>12/4</td><td>삿포로 ⇄ 노보리베츠</td><td>특급 스즈란·호쿠토 (약 70~80분)</td></tr>
+        <tr><td>12/5</td><td>삿포로 ⇄ 오타루</td><td>쾌속 에어포트 u시트 (약 32분)</td></tr>
+        <tr><td>12/6</td><td>삿포로 → 신치토세공항</td><td>쾌속 에어포트 u시트 (약 37분)</td></tr>
+      </table>
+      <p class="where">🌊 오타루 갈 때는 <b>오른쪽 좌석</b>이 바다 뷰!</p>
+    </div>
+  </section>
+
+  <section id="plan">
+    <h2>🗓 추천 일정</h2>
+
+    <div class="card">
+      <div class="day-head"><span class="badge">DAY 1 · 12/3 목</span><span class="where">도착 · 삿포로 시내</span></div>
+      <ul>
+        <li><span class="time">도착</span>신치토세공항 → JR패스 교환 + 4일치 지정석 받기</li>
+        <li><span class="time">이동</span>쾌속 에어포트로 삿포로역 → 숙소 체크인</li>
+        <li><span class="time">16시~</span>해가 일찍 져요. <b>오도리공원 화이트 일루미네이션</b> + <b>독일 크리스마스 마켓</b></li>
+        <li><span class="time">저녁</span>스스키노에서 미소라멘 or 징기스칸</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="day-head"><span class="badge">DAY 2 · 12/4 금</span><span class="where">노보리베츠 온천 당일치기</span></div>
+      <ul>
+        <li><span class="time">오전</span>삿포로 → 노보리베츠역 (특급, 약 70~80분)</li>
+        <li><span class="time">이동</span>역 앞에서 온천행 버스 약 15~20분 <span class="pill">버스는 패스 불포함</span></li>
+        <li><span class="time">낮</span><b>지옥계곡(지고쿠다니)</b> 산책 → <b>오유누마</b> 연못 → <b>천연 족욕</b></li>
+        <li><span class="time">오후</span>온천 호텔 <b>당일 입욕</b>으로 노천탕 즐기기</li>
+        <li><span class="time">저녁</span>특급으로 삿포로 복귀</li>
+      </ul>
+      <div class="note">🕓 해가 16시쯤 져서 지옥계곡은 <b>낮에</b> 먼저 보세요. 눈길이라 미끄럼 방지 신발 필수!</div>
+    </div>
+
+    <div class="card">
+      <div class="day-head"><span class="badge">DAY 3 · 12/5 토</span><span class="where">오타루</span></div>
+      <ul>
+        <li><span class="time">오전</span>삿포로 → 오타루 (쾌속 에어포트 u시트, 약 32분)</li>
+        <li><span class="time">낮</span><b>사카이마치 거리</b>: 오르골당, 기타이치 유리, 르타오 디저트</li>
+        <li><span class="time">점심</span>오타루 <b>스시 거리</b>에서 초밥</li>
+        <li><span class="time">16시~</span>가스등 켜진 <b>오타루 운하</b> 야경 산책</li>
+        <li><span class="time">저녁</span>삿포로 복귀</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="day-head"><span class="badge">DAY 4 · 12/6 일</span><span class="where">삿포로 → 귀국</span></div>
+      <ul>
+        <li><span class="time">아침</span><b>니조시장</b> 해산물 덮밥</li>
+        <li><span class="time">오전</span>삿포로 시계탑 · <b>JR타워 T38 전망대</b></li>
+        <li><span class="time">낮</span>삿포로역 쇼핑 (다이마루, 스텔라플레이스) · 기념품</li>
+        <li><span class="time">출발</span>쾌속 에어포트로 신치토세공항 → 공항 쇼핑 (로이스 초콜릿 등)</li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="fun">
+    <h2>🎡 지역별 놀거리</h2>
+    <div class="grid">
+      <div class="card">
+        <h3>🏙 삿포로</h3>
+        <ul>
+          <li>오도리공원 화이트 일루미네이션</li>
+          <li>독일 크리스마스 마켓</li>
+          <li>삿포로 TV타워</li>
+          <li>모이와산 로프웨이 야경</li>
+          <li>삿포로 맥주 박물관</li>
+          <li>타누키코지 상점가</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>♨️ 노보리베츠</h3>
+        <ul>
+          <li>지옥계곡 (지고쿠다니)</li>
+          <li>오유누마 · 천연 족욕</li>
+          <li>온천 호텔 당일 입욕</li>
+          <li>곰 목장 (로프웨이)</li>
+          <li>다테 시대촌</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>🌊 오타루</h3>
+        <ul>
+          <li>오타루 운하 야경</li>
+          <li>오타루 오르골당</li>
+          <li>사카이마치 거리 · 르타오</li>
+          <li>기타이치 유리</li>
+          <li>스시 거리</li>
+        </ul>
+      </div>
+    </div>
+    <div class="note">🎄 화이트 일루미네이션과 크리스마스 마켓은 보통 11월 말 ~ 12월 25일 열려요. 정확한 기간은 출발 전 확인!</div>
+  </section>
+
+  <section id="weather">
+    <h2>🌨 날씨 · 준비물</h2>
+    <div class="card">
+      <table>
+        <tr><th>기온</th><td>낮 2~4℃ / 밤 -4~-2℃ · 바람 불면 체감 -5~-10℃</td></tr>
+        <tr><th>눈</th><td>4일 중 2~3일 눈 예상 · 빙판길 주의</td></tr>
+        <tr><th>해</th><td>일출 6:50 / 일몰 16:00경</td></tr>
+      </table>
+      <p class="where">※ 12월 초 평년 기준이에요. 실제 예보는 출발 1주 전(11/26경)부터 확인하세요.</p>
+      <ul>
+        <li>🧥 롱패딩 · 방수 겉옷 · 히트텍 2겹</li>
+        <li>🧤 장갑 · 목도리 · 털모자 · 귀마개</li>
+        <li>🥾 <b>미끄럼 방지 방한부츠</b> (현지 편의점에서 신발용 아이젠 판매)</li>
+        <li>🔥 핫팩 넉넉히</li>
+        <li>🛂 <b>여권</b> (JR패스 교환·지정석 받을 때 필요)</li>
+      </ul>
+    </div>
+  </section>
+
+  <footer>
+    가격·시간표·운영 기간은 바뀔 수 있으니 출발 전 공식 사이트에서 확인하세요.<br>
+    참고: <a href="https://www.jrhokkaido.co.jp/global/english/ticket/railpass/" target="_blank" rel="noopener">JR Hokkaido Rail Passes</a>
+  </footer>
+</div>
+</body>
+</html>
