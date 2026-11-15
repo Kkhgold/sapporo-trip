@@ -1,0 +1,494 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>삿포로 2인 여행</title>
+<meta name="description" content="12/3~6 삿포로 2인 여행 일정 · 날짜별 근처 맛집 · 버튼으로 움직이는 경로 애니메이션">
+<meta property="og:title" content="❄️ 삿포로 2인 여행 12/3~6">
+<meta property="og:description" content="날짜별 일정 · 근처 맛집 · 경로 애니메이션">
+<meta property="og:image" content="https://kkhgold.github.io/sapporo-trip/og.jpg">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+  :root {
+    --bg: #eef3f9; --card: #ffffff; --text: #1b2230; --muted: #5b6577;
+    --line: #dde4ee; --accent: #2563b8; --accent-soft: #e4eefb;
+    --food: #c2410c; --food-soft: #fdeee4; --chip: #eef2f7;
+    --d1: #2563b8; --d2: #c2410c; --d3: #0f8a6a; --d4: #7c3aed;
+    --map-land: #f7f9fc; --map-sea: #dbe8f6;
+    --shadow: 0 1px 2px rgba(20,30,50,.06), 0 6px 20px rgba(20,30,50,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f141b; --card: #182029; --text: #e6ebf2; --muted: #9aa5b6;
+      --line: #28323f; --accent: #7cb1f0; --accent-soft: #1b2a3d;
+      --food: #fb9a5b; --food-soft: #33221a; --chip: #222b37;
+      --d1: #7cb1f0; --d2: #fb9a5b; --d3: #4fd1a8; --d4: #b69cf7;
+      --map-land: #1f2833; --map-sea: #142234;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 20px rgba(0,0,0,.25);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f141b; --card: #182029; --text: #e6ebf2; --muted: #9aa5b6;
+    --line: #28323f; --accent: #7cb1f0; --accent-soft: #1b2a3d;
+    --food: #fb9a5b; --food-soft: #33221a; --chip: #222b37;
+    --d1: #7cb1f0; --d2: #fb9a5b; --d3: #4fd1a8; --d4: #b69cf7;
+    --map-land: #1f2833; --map-sea: #142234;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 20px rgba(0,0,0,.25);
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", "Noto Sans KR", "Malgun Gothic", sans-serif;
+  }
+  #snow { position: fixed; inset: 0; pointer-events: none; z-index: 50; }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 0 16px 64px; }
+
+  header.hero {
+    background: linear-gradient(160deg, #1e3a66, #2c5c9c 60%, #5d8fd0);
+    color: #fff; padding: 36px 16px 28px; text-align: center;
+  }
+  .hero h1 { margin: 0 0 6px; font-size: 1.7rem; letter-spacing: -.02em; }
+  .hero p { margin: 0; opacity: .9; }
+  .hero .meta { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 14px; }
+  .hero .meta span { background: rgba(255,255,255,.16); border-radius: 999px; padding: 4px 12px; font-size: .88rem; }
+  .hero .actions { margin-top: 18px; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+
+  button { font: inherit; cursor: pointer; }
+  .btn {
+    border: 0; border-radius: 999px; padding: 10px 18px; font-weight: 600; font-size: .95rem;
+    background: var(--accent); color: #fff; transition: transform .12s, opacity .2s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  :root[data-theme="dark"] .btn, .btn { color: #fff; }
+  .btn:active { transform: scale(.96); }
+  .btn.ghost { background: rgba(255,255,255,.18); }
+  .btn.line { background: var(--accent-soft); color: var(--accent); }
+  .btn.food { background: var(--food-soft); color: var(--food); }
+  .btn[aria-pressed="true"] { outline: 2px solid currentColor; outline-offset: 2px; }
+  .btn:disabled { opacity: .5; cursor: default; }
+
+  .lead { color: var(--muted); font-size: .92rem; margin: 18px 2px 0; }
+  .card { background: var(--card); border-radius: 16px; box-shadow: var(--shadow); padding: 18px; margin-top: 16px; }
+  h2 { font-size: 1.15rem; margin: 0 0 10px; letter-spacing: -.01em; }
+
+  /* map */
+  .map-box { position: relative; border-radius: 12px; overflow: hidden; background: var(--map-sea); }
+  #map { height: 360px; width: 100%; z-index: 0; }
+  .leaflet-container { font: inherit; background: var(--map-sea); }
+  .pin { background: none; border: 0; }
+  .pin span { display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; transform: translate(-50%, -50%);
+    background: var(--card); color: var(--text); border: 2px solid var(--text); border-radius: 999px;
+    padding: 2px 8px; font-size: 12px; font-weight: 700; box-shadow: 0 2px 6px rgba(0,0,0,.2); }
+  .pin.up span { transform: translate(-50%, calc(-100% - 8px)); }
+  .pin.down span { transform: translate(-50%, 8px); }
+  .pin.right span { transform: translate(10px, -50%); }
+  .pin.left span { transform: translate(calc(-100% - 10px), -50%); }
+  .dot { background: none; border: 0; }
+  .dot span { display: block; width: 12px; height: 12px; transform: translate(-50%, -50%); border-radius: 50%; background: var(--card); border: 3px solid var(--text); }
+  .train-icon { background: none; border: 0; }
+  .train-icon span { display: grid; place-items: center; width: 34px; height: 34px; transform: translate(-50%, -50%);
+    border-radius: 50%; background: #fff; font-size: 20px; box-shadow: 0 0 0 3px var(--tc, #2563b8), 0 3px 10px rgba(0,0,0,.35); }
+  @media (min-width: 620px) { #map { height: 420px; } }
+  .map-caption { margin: 10px 0 0; min-height: 1.6em; font-weight: 600; text-align: center; }
+  .map-controls { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-top: 10px; }
+  .legend { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 10px; font-size: .82rem; color: var(--muted); }
+  .legend i { display: inline-block; width: 14px; height: 4px; border-radius: 2px; vertical-align: middle; margin-right: 4px; }
+
+  /* day cards */
+  .day { border-left: 5px solid var(--dc); transition: box-shadow .3s, transform .3s; }
+  .day.active { transform: translateY(-2px); box-shadow: 0 0 0 2px var(--dc), var(--shadow); }
+  .day-head { display: flex; align-items: center; gap: 12px; }
+  .day-badge { flex: none; width: 52px; height: 52px; border-radius: 14px; background: var(--dc); color: #fff;
+    display: grid; place-items: center; text-align: center; line-height: 1.05; font-weight: 800; font-size: .78rem; }
+  :root[data-theme="dark"] .day-badge { color: #10151c; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .day-badge { color: #10151c; } }
+  .day-badge b { display: block; font-size: 1.15rem; }
+  .day-title { flex: 1; min-width: 0; }
+  .day-title h3 { margin: 0; font-size: 1.05rem; }
+  .day-title p { margin: 0; color: var(--muted); font-size: .86rem; }
+  .day-btns { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  .day-btns .btn { padding: 8px 14px; font-size: .88rem; }
+
+  ol.timeline { list-style: none; margin: 14px 0 0; padding: 0 0 0 18px; position: relative; }
+  ol.timeline::before { content: ""; position: absolute; left: 5px; top: 6px; bottom: 6px; width: 2px; background: var(--line); }
+  ol.timeline li { position: relative; padding: 6px 0 6px 10px; }
+  ol.timeline li::before { content: ""; position: absolute; left: -17px; top: 14px; width: 10px; height: 10px; border-radius: 50%; background: var(--dc); box-shadow: 0 0 0 3px var(--card); }
+  ol.timeline .t { font-weight: 700; font-size: .82rem; color: var(--dc); margin-right: 6px; }
+  .js ol.timeline li { opacity: .35; }
+  .js ol.timeline li.on { opacity: 1; animation: pop .45s ease both; }
+  @keyframes pop { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: none; } }
+
+  .foods { display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 14px; }
+  .js .foods { display: none; }
+  .js .foods.open { display: grid; }
+  .spot { background: var(--food-soft); border-radius: 12px; padding: 12px 14px; }
+  .js .foods.open .spot { animation: flipIn .5s ease both; }
+  .foods.open .spot:nth-child(2) { animation-delay: .1s; }
+  .foods.open .spot:nth-child(3) { animation-delay: .2s; }
+  @keyframes flipIn { from { opacity: 0; transform: perspective(600px) rotateX(-70deg); transform-origin: top; } to { opacity: 1; transform: none; } }
+  .spot h4 { margin: 0; font-size: .98rem; }
+  .spot h4 small { font-weight: 500; color: var(--muted); font-size: .78rem; margin-left: 4px; }
+  .spot p { margin: 4px 0 0; font-size: .88rem; }
+  .spot .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .spot .tags span { background: var(--card); border-radius: 999px; padding: 2px 9px; font-size: .76rem; color: var(--muted); }
+  .spot a { color: var(--food); font-size: .82rem; font-weight: 600; }
+
+  /* roulette */
+  .roulette { text-align: center; }
+  .slot { margin: 6px auto 14px; height: 64px; overflow: hidden; border-radius: 12px; background: var(--chip);
+    display: grid; place-items: center; font-size: 1.15rem; font-weight: 700; max-width: 420px; padding: 0 10px; }
+  .slot.spin span { animation: blur .09s linear infinite; }
+  @keyframes blur { 0% { transform: translateY(-40%); opacity: .3; } 50% { opacity: 1; } 100% { transform: translateY(40%); opacity: .3; } }
+  .slot.win { animation: win .6s ease; }
+  @keyframes win { 0%,100% { transform: scale(1); } 40% { transform: scale(1.06); background: var(--food-soft); } }
+  .slot small { display: block; font-size: .8rem; font-weight: 500; color: var(--muted); }
+
+  table.budget { width: 100%; border-collapse: collapse; font-size: .9rem; }
+  table.budget td { padding: 8px 4px; border-bottom: 1px solid var(--line); }
+  table.budget td:last-child { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  table.budget tr.total td { font-weight: 800; border-bottom: 0; }
+  .note { font-size: .82rem; color: var(--muted); margin: 10px 0 0; }
+  .back { display: inline-block; margin-top: 22px; color: var(--accent); font-weight: 600; }
+
+  @media (min-width: 620px) {
+    .foods { grid-template-columns: 1fr 1fr; }
+    .hero h1 { font-size: 2rem; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+  }
+</style>
+</head>
+<body>
+<canvas id="snow" aria-hidden="true"></canvas>
+
+<header class="hero">
+  <h1>❄️ 삿포로 2인 여행</h1>
+  <p>삿포로 · 노보리베츠 · 오타루 3박 4일</p>
+  <div class="meta"><span>📅 12/3(목) ~ 12/6(일)</span><span>👫 2명</span><span>🚆 JR패스 이동</span></div>
+  <div class="actions">
+    <button class="btn ghost" id="snowBtn" aria-pressed="false">❄️ 눈 내리기</button>
+    <button class="btn ghost" id="allBtn">✨ 전체 일정 펼치기</button>
+  </div>
+</header>
+
+<main class="wrap">
+  <p class="lead">버튼을 누르면 움직여요. 경로 재생, 일정 펼치기, 맛집 보기, 메뉴 룰렛을 눌러 보세요.</p>
+
+  <!-- MAP -->
+  <section class="card" aria-labelledby="mapTitle">
+    <h2 id="mapTitle">🗺 4일 동선 애니메이션</h2>
+    <div class="map-box"><div id="map" role="img" aria-label="신치토세공항, 삿포로, 오타루, 노보리베츠를 잇는 날짜별 이동 경로 지도"></div></div>
+    <p class="map-caption" id="mapCaption" aria-live="polite">▶ 버튼을 눌러 경로를 재생하세요</p>
+    <div class="map-controls">
+      <button class="btn" id="playBtn">▶ 전체 경로 재생</button>
+      <button class="btn line" data-play="1">1일</button>
+      <button class="btn line" data-play="2">2일</button>
+      <button class="btn line" data-play="3">3일</button>
+      <button class="btn line" data-play="4">4일</button>
+    </div>
+    <div class="legend">
+      <span><i style="background:var(--d1)"></i>12/3 도착</span>
+      <span><i style="background:var(--d2)"></i>12/4 노보리베츠</span>
+      <span><i style="background:var(--d3)"></i>12/5 오타루</span>
+      <span><i style="background:var(--d4)"></i>12/6 귀국</span>
+    </div>
+  </section>
+
+  <!-- DAYS -->
+  <section class="card day" id="day1" style="--dc:var(--d1)">
+    <div class="day-head">
+      <div class="day-badge">12/3<b>목</b></div>
+      <div class="day-title"><h3>DAY 1 · 도착 & 삿포로 야경</h3><p>신치토세공항 → 삿포로 · 오도리 · 스스키노</p></div>
+    </div>
+    <div class="day-btns">
+      <button class="btn line" data-reveal="day1">🗓 일정 펼치기</button>
+      <button class="btn food" data-food="day1">🍜 근처 맛집</button>
+      <button class="btn line" data-play="1">🚆 경로</button>
+    </div>
+    <ol class="timeline">
+      <li><span class="t">도착</span>신치토세공항 도착 → JR패스 교환 + 4일치 지정석 한 번에 받기</li>
+      <li><span class="t">이동</span>쾌속 에어포트로 삿포로역(약 37분) → 숙소 체크인</li>
+      <li><span class="t">16시~</span>해가 일찍 져요. 오도리공원 화이트 일루미네이션 + 독일 크리스마스 마켓 구경</li>
+      <li><span class="t">저녁</span>스스키노로 걸어가 징기스칸 or 미소라멘</li>
+      <li><span class="t">밤</span>삿포로식 마무리 '시메 파르페'로 둘이 디저트</li>
+    </ol>
+    <div class="foods">
+      <div class="spot"><h4>다루마 본점 <small>だるま 本店</small></h4><p>스스키노의 대표 징기스칸(양고기 구이). 좌석이 적어 줄 서는 곳이라 오픈 직후가 좋아요.</p><div class="tags"><span>🐑 징기스칸</span><span>📍 스스키노</span><span>2인 약 ¥5,000~</span></div></div>
+      <div class="spot"><h4>원조 라멘 요코초 <small>元祖さっぽろラーメン横丁</small></h4><p>작은 라멘집이 모인 골목. 삿포로 명물 미소라멘을 한 그릇씩 다르게 시켜 나눠 먹기 좋아요.</p><div class="tags"><span>🍜 미소라멘</span><span>📍 스스키노</span><span>2인 약 ¥2,500~</span></div></div>
+      <div class="spot"><h4>파르페, 커피, 술, 사토 <small>パフェ、珈琲、酒、佐藤</small></h4><p>밤에 먹는 '시메 파르페' 인기 가게. 저녁 시간대부터 열고 대기 줄이 있어요.</p><div class="tags"><span>🍨 시메 파르페</span><span>📍 스스키노</span><span>2인 약 ¥3,500~</span></div></div>
+    </div>
+  </section>
+
+  <section class="card day" id="day2" style="--dc:var(--d2)">
+    <div class="day-head">
+      <div class="day-badge">12/4<b>금</b></div>
+      <div class="day-title"><h3>DAY 2 · 노보리베츠 온천 당일치기</h3><p>지옥계곡 산책 · 노천탕</p></div>
+    </div>
+    <div class="day-btns">
+      <button class="btn line" data-reveal="day2">🗓 일정 펼치기</button>
+      <button class="btn food" data-food="day2">🍜 근처 맛집</button>
+      <button class="btn line" data-play="2">🚆 경로</button>
+    </div>
+    <ol class="timeline">
+      <li><span class="t">오전</span>삿포로 → 노보리베츠역 특급(약 70~80분)</li>
+      <li><span class="t">이동</span>역 앞에서 온천가행 버스 약 15~20분 (버스는 패스 불포함)</li>
+      <li><span class="t">점심</span>온천 거리에서 '지옥 라멘' 점심</li>
+      <li><span class="t">낮</span>지옥계곡(지고쿠다니) → 오유누마 연못 → 천연 족욕. 해가 16시쯤 지니 먼저 보기</li>
+      <li><span class="t">오후</span>온천 호텔 당일 입욕으로 노천탕</li>
+      <li><span class="t">저녁</span>특급으로 삿포로 복귀 → 역 근처에서 스프카레</li>
+    </ol>
+    <div class="foods">
+      <div class="spot"><h4>아지노 다이오 <small>味の大王 登別温泉店</small></h4><p>지옥계곡 테마의 매운 '지옥 라멘'. 맵기 단계를 고를 수 있어 한 명은 순한 맛, 한 명은 도전!</p><div class="tags"><span>🌶 지옥 라멘</span><span>📍 노보리베츠 온천가</span><span>2인 약 ¥2,400~</span></div></div>
+      <div class="spot"><h4>텐카츠 <small>天ぷら 天勝</small></h4><p>온천가의 오래된 튀김·덮밥집. 텐동이나 튀김 정식으로 든든한 점심.</p><div class="tags"><span>🍤 텐동</span><span>📍 노보리베츠 온천가</span><span>2인 약 ¥3,000~</span></div></div>
+      <div class="spot"><h4>스프카레 GARAKU <small>スープカレー GARAKU</small></h4><p>삿포로로 돌아와 몸 녹이는 저녁. 삿포로 명물 스프카레의 인기 가게라 저녁엔 대기가 있어요.</p><div class="tags"><span>🍛 스프카레</span><span>📍 삿포로 다누키코지 근처</span><span>2인 약 ¥3,600~</span></div></div>
+    </div>
+  </section>
+
+  <section class="card day" id="day3" style="--dc:var(--d3)">
+    <div class="day-head">
+      <div class="day-badge">12/5<b>토</b></div>
+      <div class="day-title"><h3>DAY 3 · 오타루 운하 & 디저트</h3><p>사카이마치 거리 · 스시 · 운하 야경</p></div>
+    </div>
+    <div class="day-btns">
+      <button class="btn line" data-reveal="day3">🗓 일정 펼치기</button>
+      <button class="btn food" data-food="day3">🍣 근처 맛집</button>
+      <button class="btn line" data-play="3">🚆 경로</button>
+    </div>
+    <ol class="timeline">
+      <li><span class="t">오전</span>삿포로 → 오타루 쾌속 에어포트(약 32분). 바다 쪽(오른쪽) 창가 추천</li>
+      <li><span class="t">낮</span>사카이마치 거리: 오르골당, 기타이치 유리 구경</li>
+      <li><span class="t">점심</span>오타루 스시 거리에서 초밥</li>
+      <li><span class="t">오후</span>르타오 · 롯카테이에서 디저트 타임</li>
+      <li><span class="t">16시~</span>가스등 켜진 오타루 운하 야경 산책 📸</li>
+      <li><span class="t">저녁</span>삿포로 복귀</li>
+    </ol>
+    <div class="foods">
+      <div class="spot"><h4>마사즈시 본점 <small>政寿司 本店</small></h4><p>오타루 스시 거리의 대표 노포. 런치 세트가 부담이 적고, 둘이 오마카세 나눠 먹기도 좋아요.</p><div class="tags"><span>🍣 초밥</span><span>📍 오타루 스시 거리</span><span>2인 약 ¥8,000~</span></div></div>
+      <div class="spot"><h4>르타오 본점 <small>LeTAO 本店</small></h4><p>오타루 명물 '더블 프로마주' 치즈케이크. 2층 카페에서 먹고 갈 수 있어요.</p><div class="tags"><span>🍰 치즈케이크</span><span>📍 사카이마치 메르헨 교차로</span><span>2인 약 ¥2,000~</span></div></div>
+      <div class="spot"><h4>롯카테이 오타루운하점 <small>六花亭</small></h4><p>버터 샌드로 유명한 홋카이도 과자점. 기념품 사기에도 딱.</p><div class="tags"><span>🍪 버터 샌드</span><span>📍 사카이마치 거리</span><span>2인 약 ¥1,500~</span></div></div>
+    </div>
+  </section>
+
+  <section class="card day" id="day4" style="--dc:var(--d4)">
+    <div class="day-head">
+      <div class="day-badge">12/6<b>일</b></div>
+      <div class="day-title"><h3>DAY 4 · 아침 시장 & 귀국</h3><p>니조시장 · 시계탑 · 삿포로역 쇼핑</p></div>
+    </div>
+    <div class="day-btns">
+      <button class="btn line" data-reveal="day4">🗓 일정 펼치기</button>
+      <button class="btn food" data-food="day4">🦀 근처 맛집</button>
+      <button class="btn line" data-play="4">🚆 경로</button>
+    </div>
+    <ol class="timeline">
+      <li><span class="t">아침</span>니조시장에서 해산물 덮밥 아침</li>
+      <li><span class="t">오전</span>삿포로 시계탑 · JR타워 T38 전망대</li>
+      <li><span class="t">점심</span>삿포로역 스텔라플레이스에서 회전초밥</li>
+      <li><span class="t">낮</span>다이마루 · 스텔라플레이스 기념품 쇼핑</li>
+      <li><span class="t">출발</span>쾌속 에어포트로 신치토세공항 → 공항 쇼핑 (로이스 초콜릿 등)</li>
+    </ol>
+    <div class="foods">
+      <div class="spot"><h4>오이소 <small>海鮮食堂 大磯</small></h4><p>니조시장 안 해산물 식당. 성게·연어알·게살 듬뿍 카이센동을 아침부터.</p><div class="tags"><span>🦀 카이센동</span><span>📍 니조시장</span><span>2인 약 ¥6,000~</span></div></div>
+      <div class="spot"><h4>네무로 하나마루 <small>回転寿司 根室花まる</small></h4><p>삿포로역 스텔라플레이스 6층의 인기 회전초밥. 줄이 길어 번호표 먼저 뽑기!</p><div class="tags"><span>🍣 회전초밥</span><span>📍 삿포로역 JR타워</span><span>2인 약 ¥5,000~</span></div></div>
+      <div class="spot"><h4>로이스 초콜릿 월드 <small>ROYCE' Chocolate World</small></h4><p>신치토세공항 안 초콜릿 매장 겸 작은 박물관. 생초콜릿은 공항에서 마지막에 사기.</p><div class="tags"><span>🍫 생초콜릿</span><span>📍 신치토세공항</span><span>선물용</span></div></div>
+    </div>
+  </section>
+
+  <!-- ROULETTE -->
+  <section class="card roulette" aria-labelledby="rTitle">
+    <h2 id="rTitle">🎲 오늘 뭐 먹지? 메뉴 룰렛</h2>
+    <div class="slot" id="slot" aria-live="polite"><span>버튼을 눌러 돌려 보세요</span></div>
+    <button class="btn food" id="spinBtn">🎰 룰렛 돌리기</button>
+  </section>
+
+  <!-- BUDGET -->
+  <section class="card" aria-labelledby="bTitle">
+    <h2 id="bTitle">💴 2인 예상 경비 (숙박·항공 제외)</h2>
+    <table class="budget">
+      <tr><td>JR 삿포로-노보리베츠 에어리어 패스 4일 × 2</td><td>약 ¥24,000</td></tr>
+      <tr><td>노보리베츠 버스 + 온천 당일 입욕 × 2</td><td>약 ¥6,000</td></tr>
+      <tr><td>식비 (맛집 위주, 4일)</td><td>약 ¥45,000</td></tr>
+      <tr><td>디저트 · 카페 · 간식</td><td>약 ¥8,000</td></tr>
+      <tr><td>입장료 (T38 전망대 등) · 지하철</td><td>약 ¥5,000</td></tr>
+      <tr class="total"><td>합계</td><td>약 ¥88,000</td></tr>
+    </table>
+    <p class="note">가격·영업시간은 대략적인 기준이에요. 가게 휴무일과 패스 요금은 출발 전에 한 번 더 확인하세요.</p>
+  </section>
+
+  <a class="back" href="./">← JR패스 · 놀거리 가이드 보기</a>
+</main>
+
+<script>
+document.documentElement.classList.add('js');
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ---------- snow ---------- */
+const cv = document.getElementById('snow'), ctx = cv.getContext('2d');
+let flakes = [], snowing = false, raf = 0;
+function size() { cv.width = innerWidth * devicePixelRatio; cv.height = innerHeight * devicePixelRatio; }
+addEventListener('resize', size); size();
+function makeFlakes() {
+  flakes = Array.from({ length: Math.min(140, Math.round(innerWidth / 5)) }, () => ({
+    x: Math.random() * cv.width, y: Math.random() * -cv.height,
+    r: (Math.random() * 2.6 + 1) * devicePixelRatio, s: Math.random() * 1 + .5, w: Math.random() * Math.PI * 2
+  }));
+}
+function tick() {
+  ctx.clearRect(0, 0, cv.width, cv.height);
+  ctx.fillStyle = 'rgba(255,255,255,.9)';
+  ctx.shadowColor = 'rgba(80,120,180,.5)'; ctx.shadowBlur = 3;
+  for (const f of flakes) {
+    f.y += f.s * devicePixelRatio; f.w += .02; f.x += Math.sin(f.w) * .6 * devicePixelRatio;
+    if (f.y > cv.height) { f.y = -10; f.x = Math.random() * cv.width; }
+    ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2); ctx.fill();
+  }
+  if (snowing) raf = requestAnimationFrame(tick);
+}
+document.getElementById('snowBtn').addEventListener('click', e => {
+  snowing = !snowing;
+  e.currentTarget.setAttribute('aria-pressed', snowing);
+  e.currentTarget.textContent = snowing ? '☀️ 눈 멈추기' : '❄️ 눈 내리기';
+  if (snowing) { makeFlakes(); tick(); } else { cancelAnimationFrame(raf); ctx.clearRect(0, 0, cv.width, cv.height); }
+});
+
+/* ---------- timeline reveal ---------- */
+function reveal(id, scroll) {
+  const card = document.getElementById(id);
+  const items = card.querySelectorAll('.timeline li');
+  items.forEach(li => li.classList.remove('on'));
+  items.forEach((li, i) => setTimeout(() => li.classList.add('on'), reduce ? 0 : i * 260));
+  if (scroll) card.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+}
+document.querySelectorAll('[data-reveal]').forEach(b => b.addEventListener('click', () => reveal(b.dataset.reveal)));
+document.getElementById('allBtn').addEventListener('click', () => {
+  ['day1', 'day2', 'day3', 'day4'].forEach((d, i) => setTimeout(() => {
+    reveal(d);
+    document.getElementById(d).querySelector('.foods').classList.add('open');
+    syncFoodBtn(d);
+  }, reduce ? 0 : i * 400));
+  document.getElementById('day1').scrollIntoView({ behavior: reduce ? 'auto' : 'smooth' });
+});
+
+/* ---------- food toggle ---------- */
+function syncFoodBtn(id) {
+  const btn = document.querySelector(`[data-food="${id}"]`);
+  const open = document.getElementById(id).querySelector('.foods').classList.contains('open');
+  btn.dataset.label ??= btn.textContent;
+  btn.textContent = open ? '✕ 맛집 닫기' : btn.dataset.label;
+  btn.setAttribute('aria-expanded', open);
+}
+document.querySelectorAll('[data-food]').forEach(b => b.addEventListener('click', () => {
+  document.getElementById(b.dataset.food).querySelector('.foods').classList.toggle('open');
+  syncFoodBtn(b.dataset.food);
+}));
+
+/* ---------- route animation (real map) ---------- */
+const caption = document.getElementById('mapCaption');
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const P = {
+  apt: [42.7752, 141.6923], spk: [43.0687, 141.3508], otr: [43.1977, 140.9937],
+  nbs: [42.4523, 141.1076], onsen: [42.4960, 141.1450]
+};
+// waypoints roughly following the JR lines
+const chitoseLine = [P.spk, [43.0590, 141.3920], [43.0386, 141.4729], [42.9853, 141.5636], [42.9200, 141.5700], [42.8853, 141.5786], [42.8285, 141.6519], [42.8100, 141.6705], P.apt];
+const toNbs = [P.spk, [43.0386, 141.4729], [42.9853, 141.5636], [42.8853, 141.5786], [42.8285, 141.6519], [42.8100, 141.6705], [42.7200, 141.6600], [42.6437, 141.6047], [42.5950, 141.4600], [42.5502, 141.3557], [42.5000, 141.2300], [42.4650, 141.1500], P.nbs, [42.4750, 141.1300], P.onsen];
+const toOtr = [P.spk, [43.0760, 141.3200], [43.0950, 141.2900], [43.1210, 141.2440], [43.1430, 141.1730], [43.1500, 141.1300], [43.1660, 141.0850], [43.1880, 141.0400], [43.1950, 141.0230], P.otr];
+const routes = {
+  1: { pts: chitoseLine.slice().reverse(), c: '--d1', cap: '12/3 ✈️ 신치토세공항 → 🏨 삿포로 (쾌속 에어포트 37분)' },
+  2: { pts: toNbs.concat(toNbs.slice(0, -1).reverse()), c: '--d2', cap: '12/4 🏨 삿포로 → ♨️ 노보리베츠 온천 → 삿포로 (특급 약 75분 + 버스)' },
+  3: { pts: toOtr.concat(toOtr.slice(0, -1).reverse()), c: '--d3', cap: '12/5 🏨 삿포로 → 🌊 오타루 → 삿포로 (쾌속 32분)' },
+  4: { pts: chitoseLine, c: '--d4', cap: '12/6 🏨 삿포로 → ✈️ 신치토세공항 → 귀국' }
+};
+const map = L.map('map', { scrollWheelZoom: false, zoomControl: true, attributionControl: true });
+L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+  maxZoom: 18, subdomains: 'abcd',
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>'
+}).addTo(map);
+const allBounds = L.latLngBounds([P.apt, P.spk, P.otr, P.nbs, P.onsen]);
+map.fitBounds(allBounds, { padding: [24, 24] });
+const ghosts = {};
+for (const n in routes) ghosts[n] = L.polyline(routes[n].pts, { color: css(routes[n].c), weight: 4, opacity: .25, dashArray: '6 8' }).addTo(map);
+const pin = (ll, html, side) => {
+  L.marker(ll, { icon: L.divIcon({ className: 'dot', html: '<span></span>', iconSize: [0, 0] }), keyboard: false, interactive: false }).addTo(map);
+  L.marker(ll, { icon: L.divIcon({ className: 'pin ' + side, html: `<span>${html}</span>`, iconSize: [0, 0] }), keyboard: false, interactive: false }).addTo(map);
+};
+pin(P.spk, '🏨 삿포로', 'right'); pin(P.otr, '🌊 오타루', 'up'); pin(P.apt, '✈️ 신치토세공항', 'down');
+pin(P.nbs, '🚉 노보리베츠역', 'left'); pin(P.onsen, '♨️ 온천가', 'right');
+const trainIcon = c => L.divIcon({ className: 'train-icon', html: `<span style="--tc:${c}">🚆</span>`, iconSize: [0, 0] });
+let train = null, trail = null, playToken = 0;
+
+function measure(pts) {
+  const d = [0];
+  for (let i = 1; i < pts.length; i++) {
+    const [a1, o1] = pts[i - 1], [a2, o2] = pts[i];
+    const k = Math.cos((a1 + a2) / 2 * Math.PI / 180);
+    d.push(d[i - 1] + Math.hypot(a2 - a1, (o2 - o1) * k));
+  }
+  return d;
+}
+function at(pts, d, dist) {
+  let i = 1; while (i < d.length - 1 && d[i] < dist) i++;
+  const f = (dist - d[i - 1]) / ((d[i] - d[i - 1]) || 1);
+  return { i, ll: [pts[i - 1][0] + (pts[i][0] - pts[i - 1][0]) * f, pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * f] };
+}
+function animateRoute(n, token) {
+  return new Promise(done => {
+    const r = routes[n], color = css(r.c), d = measure(r.pts), total = d[d.length - 1];
+    caption.textContent = r.cap;
+    document.querySelectorAll('.day').forEach(el => el.classList.toggle('active', el.id === 'day' + n));
+    map.flyToBounds(L.latLngBounds(r.pts), { padding: [36, 36], duration: reduce ? 0 : .8 });
+    if (trail) map.removeLayer(trail);
+    trail = L.polyline([r.pts[0]], { color, weight: 6, opacity: .95, lineCap: 'round' }).addTo(map);
+    if (!train) train = L.marker(r.pts[0], { icon: trainIcon(color), zIndexOffset: 1000, keyboard: false }).addTo(map);
+    else { train.setIcon(trainIcon(color)); train.setLatLng(r.pts[0]); }
+    const dur = reduce ? 1 : (n === 2 ? 5200 : 3600), t0 = performance.now() + (reduce ? 0 : 700);
+    (function step(now) {
+      if (token !== playToken) return done(false);
+      const p = Math.max(0, Math.min(1, (now - t0) / dur));
+      const e = p < .5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+      const { i, ll } = at(r.pts, d, total * e);
+      trail.setLatLngs(r.pts.slice(0, i).concat([ll]));
+      train.setLatLng(ll);
+      if (p < 1) requestAnimationFrame(step); else done(true);
+    })(performance.now());
+  });
+}
+async function play(days) {
+  const token = ++playToken;
+  document.querySelector('.map-box').scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+  for (const n of days) {
+    const ok = await animateRoute(n, token);
+    if (!ok) return;
+    await new Promise(r => setTimeout(r, reduce ? 0 : 600));
+  }
+  if (token === playToken && days.length > 1) {
+    caption.textContent = '🎉 4일 여행 완주! 즐거운 여행 되세요';
+    map.flyToBounds(allBounds, { padding: [24, 24], duration: reduce ? 0 : .8 });
+  }
+}
+document.getElementById('playBtn').addEventListener('click', () => play([1, 2, 3, 4]));
+document.querySelectorAll('[data-play]').forEach(b => b.addEventListener('click', () => play([+b.dataset.play])));
+
+/* ---------- roulette ---------- */
+const menu = [...document.querySelectorAll(".spot")].map(f => ({
+  name: f.querySelector('h4').firstChild.textContent.trim(),
+  sub: f.querySelector('.tags span').textContent + ' · ' + f.querySelectorAll('.tags span')[1].textContent
+}));
+const slot = document.getElementById('slot'), spinBtn = document.getElementById('spinBtn');
+spinBtn.addEventListener('click', () => {
+  spinBtn.disabled = true; slot.classList.remove('win'); slot.classList.add('spin');
+  let i = 0, delay = 50;
+  const end = performance.now() + (reduce ? 0 : 1800);
+  (function roll() {
+    const m = menu[Math.floor(Math.random() * menu.length)];
+    slot.innerHTML = `<span>${m.name}<small>${m.sub}</small></span>`;
+    if (performance.now() < end) { delay *= 1.08; setTimeout(roll, delay); }
+    else { slot.classList.remove('spin'); void slot.offsetWidth; slot.classList.add('win'); spinBtn.disabled = false; spinBtn.textContent = '🎰 다시 돌리기'; }
+  })();
+});
+</script>
+</body>
+</html>
