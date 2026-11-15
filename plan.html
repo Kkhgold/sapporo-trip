@@ -8,8 +8,6 @@
 <meta property="og:title" content="❄️ 삿포로 2인 여행 12/3~6">
 <meta property="og:description" content="날짜별 일정 · 근처 맛집 · 경로 애니메이션">
 <meta property="og:image" content="https://kkhgold.github.io/sapporo-trip/og.jpg">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <style>
   :root {
     --bg: #eef3f9; --card: #ffffff; --text: #1b2230; --muted: #5b6577;
@@ -92,6 +90,7 @@
   .train-icon span { display: grid; place-items: center; width: 34px; height: 34px; transform: translate(-50%, -50%);
     border-radius: 50%; background: #fff; font-size: 20px; box-shadow: 0 0 0 3px var(--tc, #2563b8), 0 3px 10px rgba(0,0,0,.35); }
   @media (min-width: 620px) { #map { height: 420px; } }
+  .map-src { font-size: .76rem; color: var(--muted); text-align: right; margin: 6px 2px 0; }
   .map-caption { margin: 10px 0 0; min-height: 1.6em; font-weight: 600; text-align: center; }
   .map-controls { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-top: 10px; }
   .legend { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 10px; font-size: .82rem; color: var(--muted); }
@@ -182,6 +181,7 @@
   <section class="card" aria-labelledby="mapTitle">
     <h2 id="mapTitle">🗺 4일 동선 애니메이션</h2>
     <div class="map-box"><div id="map" role="img" aria-label="신치토세공항, 삿포로, 오타루, 노보리베츠를 잇는 날짜별 이동 경로 지도"></div></div>
+    <p class="map-src" id="mapSrc">지도 불러오는 중…</p>
     <p class="map-caption" id="mapCaption" aria-live="polite">▶ 버튼을 눌러 경로를 재생하세요</p>
     <div class="map-controls">
       <button class="btn" id="playBtn">▶ 전체 경로 재생</button>
@@ -402,23 +402,105 @@ const routes = {
   3: { pts: toOtr.concat(toOtr.slice(0, -1).reverse()), c: '--d3', cap: '12/5 🏨 삿포로 → 🌊 오타루 → 삿포로 (쾌속 32분)' },
   4: { pts: chitoseLine, c: '--d4', cap: '12/6 🏨 삿포로 → ✈️ 신치토세공항 → 귀국' }
 };
-const map = L.map('map', { scrollWheelZoom: false, zoomControl: true, attributionControl: true });
-L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-  maxZoom: 18, subdomains: 'abcd',
-  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>'
-}).addTo(map);
-const allBounds = L.latLngBounds([P.apt, P.spk, P.otr, P.nbs, P.onsen]);
-map.fitBounds(allBounds, { padding: [24, 24] });
-const ghosts = {};
-for (const n in routes) ghosts[n] = L.polyline(routes[n].pts, { color: css(routes[n].c), weight: 4, opacity: .25, dashArray: '6 8' }).addTo(map);
-const pin = (ll, html, side) => {
-  L.marker(ll, { icon: L.divIcon({ className: 'dot', html: '<span></span>', iconSize: [0, 0] }), keyboard: false, interactive: false }).addTo(map);
-  L.marker(ll, { icon: L.divIcon({ className: 'pin ' + side, html: `<span>${html}</span>`, iconSize: [0, 0] }), keyboard: false, interactive: false }).addTo(map);
+const allPts = [P.apt, P.spk, P.otr, P.nbs, P.onsen];
+const PINS = [[P.spk, '🏨 삿포로', 'up'], [P.otr, '🌊 오타루', 'up'], [P.apt, '✈️ 신치토세공항', 'down'],
+  [P.nbs, '🚉 노보리베츠역', 'down'], [P.onsen, '♨️ 온천가', 'up']];
+const GMAPS_KEY = 'AIzaSyAA9EFrNWCj6KPlz1Rna_ab950MeYht1uo';
+let M = null, train = null, trail = null, playToken = 0, mapMode = '';
+
+function setupMap(adapter, label) {
+  M = adapter; mapMode = label; train = null; trail = null; playToken++;
+  document.getElementById('mapSrc').textContent = '지도: ' + label;
+  for (const n in routes) M.ghost(routes[n].pts, css(routes[n].c));
+  PINS.forEach(p => M.pin(...p));
+  M.fit(allPts);
+}
+function freshMapDiv() {
+  const old = document.getElementById('map'), el = old.cloneNode(false);
+  old.replaceWith(el); return el;
+}
+
+/* Google Maps */
+function googleAdapter() {
+  const g = google.maps, ll = a => ({ lat: a[0], lng: a[1] });
+  const map = new g.Map(document.getElementById('map'), {
+    mapId: 'DEMO_MAP_ID', center: ll(P.spk), zoom: 8, gestureHandling: 'cooperative', clickableIcons: false,
+    streetViewControl: false, fullscreenControl: true, mapTypeControl: true,
+    mapTypeControlOptions: { mapTypeIds: ['roadmap', 'hybrid'], style: g.MapTypeControlStyle.HORIZONTAL_BAR }
+  });
+  const bounds = pts => pts.reduce((b, p) => b.extend(ll(p)), new g.LatLngBounds());
+  const html = (cls, inner) => { const el = document.createElement('div'); el.className = cls; el.style.cssText = 'width:0;height:0'; el.innerHTML = inner; return el; };
+  const AM = g.marker.AdvancedMarkerElement;
+  return {
+    fit: pts => map.fitBounds(bounds(pts), 36),
+    ghost: (pts, color) => new g.Polyline({ map, path: pts.map(ll), strokeOpacity: 0, clickable: false,
+      icons: [{ icon: { path: 'M 0,-1 0,1', strokeOpacity: .5, strokeColor: color, scale: 3 }, offset: '0', repeat: '14px' }] }),
+    pin: (p, text, side) => {
+      new AM({ map, position: ll(p), content: html('dot', '<span></span>'), zIndex: 1 });
+      new AM({ map, position: ll(p), content: html('pin ' + side, `<span>${text}</span>`), zIndex: 2 });
+    },
+    trail: color => {
+      const pl = new g.Polyline({ map, path: [], strokeColor: color, strokeWeight: 6, strokeOpacity: .95, clickable: false, zIndex: 5,
+        icons: [{ icon: { path: g.SymbolPath.FORWARD_OPEN_ARROW, scale: 2, strokeColor: '#fff', strokeWeight: 2 }, offset: '30px', repeat: '70px' }] });
+      return { set: pts => pl.setPath(pts.map(ll)), remove: () => pl.setMap(null) };
+    },
+    train: (p, color) => {
+      const el = html('train-icon', `<span style="--tc:${color}">🚆</span>`);
+      const mk = new AM({ map, position: ll(p), content: el, zIndex: 999 });
+      return { set: q => { mk.position = ll(q); }, color: c => el.firstChild.style.setProperty('--tc', c) };
+    }
+  };
+}
+
+/* OpenStreetMap fallback (Leaflet) */
+function leafletAdapter() {
+  const map = L.map('map', { scrollWheelZoom: false }).setView(P.spk, 8);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    maxZoom: 18, subdomains: 'abcd',
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>'
+  }).addTo(map);
+  const side = { up: 'up', down: 'down' };
+  return {
+    fit: pts => map.flyToBounds(L.latLngBounds(pts), { padding: [36, 36], duration: reduce ? 0 : .8 }),
+    ghost: (pts, color) => L.polyline(pts, { color, weight: 4, opacity: .3, dashArray: '6 8' }).addTo(map),
+    pin: (p, text, s) => {
+      L.marker(p, { icon: L.divIcon({ className: 'dot', html: '<span></span>', iconSize: [0, 0] }), interactive: false, keyboard: false }).addTo(map);
+      L.marker(p, { icon: L.divIcon({ className: 'pin ' + side[s], html: `<span>${text}</span>`, iconSize: [0, 0] }), interactive: false, keyboard: false }).addTo(map);
+    },
+    trail: color => {
+      const pl = L.polyline([], { color, weight: 6, opacity: .95, lineCap: 'round' }).addTo(map);
+      return { set: pts => pl.setLatLngs(pts), remove: () => map.removeLayer(pl) };
+    },
+    train: (p, color) => {
+      const icon = c => L.divIcon({ className: 'train-icon', html: `<span style="--tc:${c}">🚆</span>`, iconSize: [0, 0] });
+      const mk = L.marker(p, { icon: icon(color), zIndexOffset: 1000, keyboard: false }).addTo(map);
+      return { set: q => mk.setLatLng(q), color: c => mk.setIcon(icon(c)) };
+    }
+  };
+}
+function loadScript(src) {
+  return new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = rej; document.head.appendChild(s); });
+}
+let fellBack = false;
+async function useFallback() {
+  if (fellBack) return; fellBack = true;
+  freshMapDiv();
+  const css = document.createElement('link'); css.rel = 'stylesheet';
+  css.href = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css'; document.head.appendChild(css);
+  try {
+    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js');
+    setupMap(leafletAdapter(), 'OpenStreetMap (구글 지도를 불러오지 못해 대신 표시)');
+  } catch (e) { document.getElementById('mapSrc').textContent = '지도를 불러오지 못했어요. 인터넷 연결을 확인해 주세요.'; }
+}
+window.gm_authFailure = useFallback;
+window.__gmReady = () => {
+  if (fellBack) return;
+  try { setupMap(googleAdapter(), 'Google 지도'); } catch (e) { useFallback(); }
 };
-pin(P.spk, '🏨 삿포로', 'right'); pin(P.otr, '🌊 오타루', 'up'); pin(P.apt, '✈️ 신치토세공항', 'down');
-pin(P.nbs, '🚉 노보리베츠역', 'left'); pin(P.onsen, '♨️ 온천가', 'right');
-const trainIcon = c => L.divIcon({ className: 'train-icon', html: `<span style="--tc:${c}">🚆</span>`, iconSize: [0, 0] });
-let train = null, trail = null, playToken = 0;
+const gs = document.createElement('script');
+gs.src = `https://maps.googleapis.com/maps/api/js?key=${GMAPS_KEY}&language=ko&region=KR&libraries=marker&loading=async&callback=__gmReady`;
+gs.async = true; gs.onerror = useFallback; document.head.appendChild(gs);
+setTimeout(() => { if (!M) useFallback(); }, 8000);
 
 function measure(pts) {
   const d = [0];
@@ -439,24 +521,24 @@ function animateRoute(n, token) {
     const r = routes[n], color = css(r.c), d = measure(r.pts), total = d[d.length - 1];
     caption.textContent = r.cap;
     document.querySelectorAll('.day').forEach(el => el.classList.toggle('active', el.id === 'day' + n));
-    map.flyToBounds(L.latLngBounds(r.pts), { padding: [36, 36], duration: reduce ? 0 : .8 });
-    if (trail) map.removeLayer(trail);
-    trail = L.polyline([r.pts[0]], { color, weight: 6, opacity: .95, lineCap: 'round' }).addTo(map);
-    if (!train) train = L.marker(r.pts[0], { icon: trainIcon(color), zIndexOffset: 1000, keyboard: false }).addTo(map);
-    else { train.setIcon(trainIcon(color)); train.setLatLng(r.pts[0]); }
+    M.fit(r.pts);
+    if (trail) trail.remove();
+    trail = M.trail(color);
+    if (!train) train = M.train(r.pts[0], color); else { train.color(color); train.set(r.pts[0]); }
     const dur = reduce ? 1 : (n === 2 ? 5200 : 3600), t0 = performance.now() + (reduce ? 0 : 700);
     (function step(now) {
       if (token !== playToken) return done(false);
       const p = Math.max(0, Math.min(1, (now - t0) / dur));
       const e = p < .5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
       const { i, ll } = at(r.pts, d, total * e);
-      trail.setLatLngs(r.pts.slice(0, i).concat([ll]));
-      train.setLatLng(ll);
+      trail.set(r.pts.slice(0, i).concat([ll]));
+      train.set(ll);
       if (p < 1) requestAnimationFrame(step); else done(true);
     })(performance.now());
   });
 }
 async function play(days) {
+  if (!M) { caption.textContent = '지도를 불러오는 중이에요. 잠시 후 다시 눌러 주세요.'; return; }
   const token = ++playToken;
   document.querySelector('.map-box').scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
   for (const n of days) {
@@ -466,7 +548,7 @@ async function play(days) {
   }
   if (token === playToken && days.length > 1) {
     caption.textContent = '🎉 4일 여행 완주! 즐거운 여행 되세요';
-    map.flyToBounds(allBounds, { padding: [24, 24], duration: reduce ? 0 : .8 });
+    M.fit(allPts);
   }
 }
 document.getElementById('playBtn').addEventListener('click', () => play([1, 2, 3, 4]));
