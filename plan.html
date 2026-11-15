@@ -8,6 +8,8 @@
 <meta property="og:title" content="❄️ 삿포로 2인 여행 12/3~6">
 <meta property="og:description" content="날짜별 일정 · 근처 맛집 · 경로 애니메이션">
 <meta property="og:image" content="https://kkhgold.github.io/sapporo-trip/og.jpg">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <style>
   :root {
     --bg: #eef3f9; --card: #ffffff; --text: #1b2230; --muted: #5b6577;
@@ -74,12 +76,22 @@
 
   /* map */
   .map-box { position: relative; border-radius: 12px; overflow: hidden; background: var(--map-sea); }
-  .map-box svg { display: block; width: 100%; height: auto; }
-  .route { fill: none; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; opacity: .18; }
-  .route.drawn { opacity: 1; }
-  .stop circle { fill: var(--card); stroke: var(--text); stroke-width: 2; }
-  .stop text { font-size: 12px; font-weight: 700; fill: var(--text); paint-order: stroke; stroke: var(--map-land); stroke-width: 4px; }
-  #train { transition: opacity .3s; }
+  #map { height: 360px; width: 100%; z-index: 0; }
+  .leaflet-container { font: inherit; background: var(--map-sea); }
+  .pin { background: none; border: 0; }
+  .pin span { display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; transform: translate(-50%, -50%);
+    background: var(--card); color: var(--text); border: 2px solid var(--text); border-radius: 999px;
+    padding: 2px 8px; font-size: 12px; font-weight: 700; box-shadow: 0 2px 6px rgba(0,0,0,.2); }
+  .pin.up span { transform: translate(-50%, calc(-100% - 8px)); }
+  .pin.down span { transform: translate(-50%, 8px); }
+  .pin.right span { transform: translate(10px, -50%); }
+  .pin.left span { transform: translate(calc(-100% - 10px), -50%); }
+  .dot { background: none; border: 0; }
+  .dot span { display: block; width: 12px; height: 12px; transform: translate(-50%, -50%); border-radius: 50%; background: var(--card); border: 3px solid var(--text); }
+  .train-icon { background: none; border: 0; }
+  .train-icon span { display: grid; place-items: center; width: 34px; height: 34px; transform: translate(-50%, -50%);
+    border-radius: 50%; background: #fff; font-size: 20px; box-shadow: 0 0 0 3px var(--tc, #2563b8), 0 3px 10px rgba(0,0,0,.35); }
+  @media (min-width: 620px) { #map { height: 420px; } }
   .map-caption { margin: 10px 0 0; min-height: 1.6em; font-weight: 600; text-align: center; }
   .map-controls { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-top: 10px; }
   .legend { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 10px; font-size: .82rem; color: var(--muted); }
@@ -169,20 +181,7 @@
   <!-- MAP -->
   <section class="card" aria-labelledby="mapTitle">
     <h2 id="mapTitle">🗺 4일 동선 애니메이션</h2>
-    <div class="map-box">
-      <svg viewBox="0 0 360 260" role="img" aria-label="신치토세공항, 삿포로, 오타루, 노보리베츠를 잇는 날짜별 이동 경로">
-        <path d="M0 40 C40 30 70 45 95 52 C120 30 150 20 200 28 C260 10 320 0 360 0 L360 260 L230 260 C210 238 190 236 170 246 C150 254 120 252 95 236 C70 222 40 230 0 236 Z" fill="var(--map-land)"/>
-        <path id="r1" class="route" stroke="var(--d1)" d="M250 178 C228 150 206 120 178 96"/>
-        <path id="r2" class="route" stroke="var(--d2)" d="M178 96 C200 140 210 176 196 196 C180 214 150 218 126 214 M126 214 C150 206 172 200 184 186 C196 170 192 132 178 96"/>
-        <path id="r3" class="route" stroke="var(--d3)" d="M178 96 C150 76 118 66 84 66 M84 66 C118 74 150 84 178 96"/>
-        <path id="r4" class="route" stroke="var(--d4)" d="M178 96 C206 120 228 150 250 178"/>
-        <g class="stop"><circle cx="178" cy="96" r="7"/><text x="190" y="92">삿포로 🏨</text></g>
-        <g class="stop"><circle cx="84" cy="66" r="6"/><text x="44" y="52">오타루</text></g>
-        <g class="stop"><circle cx="126" cy="214" r="6"/><text x="70" y="236">노보리베츠 ♨️</text></g>
-        <g class="stop"><circle cx="250" cy="178" r="6"/><text x="230" y="204">신치토세공항 ✈️</text></g>
-        <g id="train" opacity="0"><circle r="11" fill="var(--text)"/><text y="5" text-anchor="middle" font-size="13">🚆</text></g>
-      </svg>
-    </div>
+    <div class="map-box"><div id="map" role="img" aria-label="신치토세공항, 삿포로, 오타루, 노보리베츠를 잇는 날짜별 이동 경로 지도"></div></div>
     <p class="map-caption" id="mapCaption" aria-live="polite">▶ 버튼을 눌러 경로를 재생하세요</p>
     <div class="map-controls">
       <button class="btn" id="playBtn">▶ 전체 경로 재생</button>
@@ -386,55 +385,88 @@ document.querySelectorAll('[data-food]').forEach(b => b.addEventListener('click'
   syncFoodBtn(b.dataset.food);
 }));
 
-/* ---------- route animation ---------- */
-const train = document.getElementById('train');
+/* ---------- route animation (real map) ---------- */
 const caption = document.getElementById('mapCaption');
-const captions = {
-  1: '12/3 ✈️ 신치토세공항 → 🏨 삿포로 (쾌속 에어포트 37분)',
-  2: '12/4 🏨 삿포로 → ♨️ 노보리베츠 → 삿포로 (특급 약 75분)',
-  3: '12/5 🏨 삿포로 → 🌊 오타루 → 삿포로 (쾌속 32분)',
-  4: '12/6 🏨 삿포로 → ✈️ 신치토세공항 → 귀국'
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const P = {
+  apt: [42.7752, 141.6923], spk: [43.0687, 141.3508], otr: [43.1977, 140.9937],
+  nbs: [42.4523, 141.1076], onsen: [42.4960, 141.1450]
 };
-let playToken = 0;
+// waypoints roughly following the JR lines
+const chitoseLine = [P.spk, [43.0590, 141.3920], [43.0386, 141.4729], [42.9853, 141.5636], [42.9200, 141.5700], [42.8853, 141.5786], [42.8285, 141.6519], [42.8100, 141.6705], P.apt];
+const toNbs = [P.spk, [43.0386, 141.4729], [42.9853, 141.5636], [42.8853, 141.5786], [42.8285, 141.6519], [42.8100, 141.6705], [42.7200, 141.6600], [42.6437, 141.6047], [42.5950, 141.4600], [42.5502, 141.3557], [42.5000, 141.2300], [42.4650, 141.1500], P.nbs, [42.4750, 141.1300], P.onsen];
+const toOtr = [P.spk, [43.0760, 141.3200], [43.0950, 141.2900], [43.1210, 141.2440], [43.1430, 141.1730], [43.1500, 141.1300], [43.1660, 141.0850], [43.1880, 141.0400], [43.1950, 141.0230], P.otr];
+const routes = {
+  1: { pts: chitoseLine.slice().reverse(), c: '--d1', cap: '12/3 ✈️ 신치토세공항 → 🏨 삿포로 (쾌속 에어포트 37분)' },
+  2: { pts: toNbs.concat(toNbs.slice(0, -1).reverse()), c: '--d2', cap: '12/4 🏨 삿포로 → ♨️ 노보리베츠 온천 → 삿포로 (특급 약 75분 + 버스)' },
+  3: { pts: toOtr.concat(toOtr.slice(0, -1).reverse()), c: '--d3', cap: '12/5 🏨 삿포로 → 🌊 오타루 → 삿포로 (쾌속 32분)' },
+  4: { pts: chitoseLine, c: '--d4', cap: '12/6 🏨 삿포로 → ✈️ 신치토세공항 → 귀국' }
+};
+const map = L.map('map', { scrollWheelZoom: false, zoomControl: true, attributionControl: true });
+L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+  maxZoom: 18, subdomains: 'abcd',
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>'
+}).addTo(map);
+const allBounds = L.latLngBounds([P.apt, P.spk, P.otr, P.nbs, P.onsen]);
+map.fitBounds(allBounds, { padding: [24, 24] });
+const ghosts = {};
+for (const n in routes) ghosts[n] = L.polyline(routes[n].pts, { color: css(routes[n].c), weight: 4, opacity: .25, dashArray: '6 8' }).addTo(map);
+const pin = (ll, html, side) => {
+  L.marker(ll, { icon: L.divIcon({ className: 'dot', html: '<span></span>', iconSize: [0, 0] }), keyboard: false, interactive: false }).addTo(map);
+  L.marker(ll, { icon: L.divIcon({ className: 'pin ' + side, html: `<span>${html}</span>`, iconSize: [0, 0] }), keyboard: false, interactive: false }).addTo(map);
+};
+pin(P.spk, '🏨 삿포로', 'right'); pin(P.otr, '🌊 오타루', 'up'); pin(P.apt, '✈️ 신치토세공항', 'down');
+pin(P.nbs, '🚉 노보리베츠역', 'left'); pin(P.onsen, '♨️ 온천가', 'right');
+const trainIcon = c => L.divIcon({ className: 'train-icon', html: `<span style="--tc:${c}">🚆</span>`, iconSize: [0, 0] });
+let train = null, trail = null, playToken = 0;
+
+function measure(pts) {
+  const d = [0];
+  for (let i = 1; i < pts.length; i++) {
+    const [a1, o1] = pts[i - 1], [a2, o2] = pts[i];
+    const k = Math.cos((a1 + a2) / 2 * Math.PI / 180);
+    d.push(d[i - 1] + Math.hypot(a2 - a1, (o2 - o1) * k));
+  }
+  return d;
+}
+function at(pts, d, dist) {
+  let i = 1; while (i < d.length - 1 && d[i] < dist) i++;
+  const f = (dist - d[i - 1]) / ((d[i] - d[i - 1]) || 1);
+  return { i, ll: [pts[i - 1][0] + (pts[i][0] - pts[i - 1][0]) * f, pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * f] };
+}
 function animateRoute(n, token) {
   return new Promise(done => {
-    const path = document.getElementById('r' + n);
-    const len = path.getTotalLength();
-    path.classList.add('drawn');
-    path.style.strokeDasharray = len; path.style.strokeDashoffset = len;
-    caption.textContent = captions[n];
-    document.querySelectorAll('.day').forEach(d => d.classList.toggle('active', d.id === 'day' + n));
-    train.setAttribute('opacity', 1);
-    const dur = reduce ? 1 : 2600, t0 = performance.now();
+    const r = routes[n], color = css(r.c), d = measure(r.pts), total = d[d.length - 1];
+    caption.textContent = r.cap;
+    document.querySelectorAll('.day').forEach(el => el.classList.toggle('active', el.id === 'day' + n));
+    map.flyToBounds(L.latLngBounds(r.pts), { padding: [36, 36], duration: reduce ? 0 : .8 });
+    if (trail) map.removeLayer(trail);
+    trail = L.polyline([r.pts[0]], { color, weight: 6, opacity: .95, lineCap: 'round' }).addTo(map);
+    if (!train) train = L.marker(r.pts[0], { icon: trainIcon(color), zIndexOffset: 1000, keyboard: false }).addTo(map);
+    else { train.setIcon(trainIcon(color)); train.setLatLng(r.pts[0]); }
+    const dur = reduce ? 1 : (n === 2 ? 5200 : 3600), t0 = performance.now() + (reduce ? 0 : 700);
     (function step(now) {
       if (token !== playToken) return done(false);
-      const p = Math.min(1, (now - t0) / dur);
+      const p = Math.max(0, Math.min(1, (now - t0) / dur));
       const e = p < .5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
-      const pt = path.getPointAtLength(len * e);
-      train.setAttribute('transform', `translate(${pt.x},${pt.y})`);
-      path.style.strokeDashoffset = len * (1 - e);
+      const { i, ll } = at(r.pts, d, total * e);
+      trail.setLatLngs(r.pts.slice(0, i).concat([ll]));
+      train.setLatLng(ll);
       if (p < 1) requestAnimationFrame(step); else done(true);
-    })(t0);
+    })(performance.now());
   });
-}
-function resetRoutes() {
-  for (let i = 1; i <= 4; i++) {
-    const p = document.getElementById('r' + i);
-    p.classList.remove('drawn'); p.style.strokeDasharray = ''; p.style.strokeDashoffset = '';
-  }
 }
 async function play(days) {
   const token = ++playToken;
-  resetRoutes();
   document.querySelector('.map-box').scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
   for (const n of days) {
     const ok = await animateRoute(n, token);
     if (!ok) return;
-    await new Promise(r => setTimeout(r, reduce ? 0 : 450));
+    await new Promise(r => setTimeout(r, reduce ? 0 : 600));
   }
-  if (token === playToken) {
-    train.setAttribute('opacity', 0);
-    if (days.length > 1) caption.textContent = '🎉 4일 여행 완주! 즐거운 여행 되세요';
+  if (token === playToken && days.length > 1) {
+    caption.textContent = '🎉 4일 여행 완주! 즐거운 여행 되세요';
+    map.flyToBounds(allBounds, { padding: [24, 24], duration: reduce ? 0 : .8 });
   }
 }
 document.getElementById('playBtn').addEventListener('click', () => play([1, 2, 3, 4]));
